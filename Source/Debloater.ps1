@@ -32,6 +32,9 @@ function Wait-ForUser ($msg = "Press Enter to continue...") {
     Read-Host $msg | Out-Null
 }
 
+# Alias for compatibility with existing calls
+Set-Alias -Name Pause-For-User -Value Wait-ForUser
+
 function Show-MenuWithKeyboard {
     param(
         [array]$MenuItems,

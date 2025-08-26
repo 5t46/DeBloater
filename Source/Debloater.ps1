@@ -1274,16 +1274,27 @@ do {
             } while ($uninstallChoice -ne '0')
         }
         '10' {
-            $apps = @(
+            # Check Windows Defender Tamper Protection status (optional check)
+            $tamperStatus = $null
             try {
-                $tamperStatus = Get-MpComputerStatus | Select-Object -ExpandProperty IsTamperProtected
+                # Try to get Windows Defender status
+                $defenderStatus = Get-MpComputerStatus -ErrorAction Stop
+                $tamperStatus = $defenderStatus.IsTamperProtected
             } catch {
-                $tamperStatus = $null
+                # Windows Defender may not be available or accessible
+                Write-Host "INFO: Windows Defender status check skipped (not available or accessible)" -ForegroundColor Gray
+                $tamperStatus = $false
             }
+
+            # Show tamper protection warning only if it's actually enabled
             if ($tamperStatus -eq $true) {
-                Write-Host "WARNING: Tamper Protection is enabled! You must disable it from Windows Security settings before you can disable Defender via registry." -ForegroundColor Red
-                Pause-For-User
+                Write-Host "WARNING: Windows Defender Tamper Protection is enabled!" -ForegroundColor Red
+                Write-Host "You may need to disable it from Windows Security settings for some operations." -ForegroundColor Yellow
+                Write-Host ""
             }
+
+            # Define Windows apps array
+            $apps = @(
                 @{num=1; name='Microsoft.WindowsCalculator'; display='Calculator'},
                 @{num=2; name='Microsoft.Windows.Photos'; display='Photos'},
                 @{num=3; name='microsoft.windowscommunicationsapps'; display='Mail & Calendar'},
@@ -1328,51 +1339,74 @@ do {
             $actionChoice = Read-Host "Enter 1 or 2 (or 0 to return)"
             if ($actionChoice -eq '0') { continue }
             function Restore-App($packageName, $displayName) {
-                $pkg = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $packageName }
-                if ($pkg) {
-                    try {
-                        Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $pkg.InstallLocation 'AppXManifest.xml')
-                        Write-Host "$displayName restored successfully." -ForegroundColor Green
-                    } catch {
-                        Write-Host "Failed to restore $displayName." -ForegroundColor Red
+                try {
+                    $pkg = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
+                    if ($pkg) {
+                        try {
+                            Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $pkg.InstallLocation 'AppXManifest.xml') -ErrorAction Stop
+                            Write-Host "SUCCESS: $displayName restored successfully." -ForegroundColor Green
+                        } catch {
+                            Write-Host "ERROR: Failed to restore $displayName - $($_.Exception.Message)" -ForegroundColor Red
+                        }
+                    } else {
+                        Write-Host "WARNING: $displayName not found on the system." -ForegroundColor Yellow
                     }
-                } else {
-                    Write-Host "$displayName not found on the system." -ForegroundColor Yellow
+                } catch {
+                    Write-Host "ERROR: Could not access app packages - $($_.Exception.Message)" -ForegroundColor Red
                 }
             }
             function Uninstall-App($packageName, $displayName) {
                 $success = $false
-                $pkgs = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $packageName }
-                if ($pkgs) {
-                    foreach ($pkg in $pkgs) {
-                        try {
-                            Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction SilentlyContinue
-                            $success = $true
-                        } catch {}
+
+                try {
+                    # Try to remove from all users
+                    $pkgs = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
+                    if ($pkgs) {
+                        foreach ($pkg in $pkgs) {
+                            try {
+                                Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
+                                $success = $true
+                            } catch {
+                                Write-Host "INFO: Could not remove from all users, trying current user..." -ForegroundColor Gray
+                            }
+                        }
                     }
-                }
-                if (-not $success) {
-                    $pkgCurrent = Get-AppxPackage | Where-Object { $_.Name -eq $packageName }
-                    if ($pkgCurrent) {
-                        try {
-                            Remove-AppxPackage -Package $pkgCurrent.PackageFullName -ErrorAction SilentlyContinue
-                            $success = $true
-                        } catch {}
+
+                    # Try to remove from current user if all users failed
+                    if (-not $success) {
+                        $pkgCurrent = Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
+                        if ($pkgCurrent) {
+                            try {
+                                Remove-AppxPackage -Package $pkgCurrent.PackageFullName -ErrorAction Stop
+                                $success = $true
+                            } catch {
+                                Write-Host "INFO: Could not remove from current user, trying provisioned packages..." -ForegroundColor Gray
+                            }
+                        }
                     }
-                }
-                if (-not $success) {
-                    $prov = Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq $packageName }
-                    if ($prov) {
-                        try {
-                            Remove-AppxProvisionedPackage -Online -PackageName $prov.PackageName -ErrorAction SilentlyContinue
-                            $success = $true
-                        } catch {}
+
+                    # Try to remove provisioned package
+                    if (-not $success) {
+                        $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $packageName }
+                        if ($prov) {
+                            try {
+                                Remove-AppxProvisionedPackage -Online -PackageName $prov.PackageName -ErrorAction Stop
+                                $success = $true
+                            } catch {
+                                # Final attempt failed
+                            }
+                        }
                     }
-                }
-                if ($success) {
-                    Write-Host "$displayName uninstalled successfully (advanced)." -ForegroundColor Green
-                } else {
-                    Write-Host "Failed to uninstall $displayName. This app may be protected by Windows or require additional steps." -ForegroundColor Red
+
+                    # Report results
+                    if ($success) {
+                        Write-Host "SUCCESS: $displayName uninstalled successfully." -ForegroundColor Green
+                    } else {
+                        Write-Host "WARNING: Could not fully uninstall $displayName. App may be protected or require additional permissions." -ForegroundColor Yellow
+                    }
+
+                } catch {
+                    Write-Host "ERROR: Failed to uninstall $displayName - $($_.Exception.Message)" -ForegroundColor Red
                 }
             }
             if ($appChoice -eq ($apps.Count+1).ToString()) {

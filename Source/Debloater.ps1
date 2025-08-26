@@ -679,7 +679,7 @@ do {
     Write-Host "2. Do Nothing " -NoNewline -ForegroundColor White
     Write-Host "( Exit )" -ForegroundColor Magenta
     Write-Host "3. Full Cleanup " -NoNewline -ForegroundColor White
-    Write-Host "( Temp, Local Temp, Windows Temp, Prefetch )" --ForegroundColor Magenta
+    Write-Host "( Temp, Local Temp, Windows Temp, Prefetch )" -ForegroundColor Magenta
     Write-Host "4. Clear Browser Cache " -NoNewline -ForegroundColor White
     Write-Host "( Firefox, Chrome, Edge )" -ForegroundColor Magenta
     Write-Host "5. Clear Recycle Bin" -ForegroundColor White

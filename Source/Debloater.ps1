@@ -486,6 +486,182 @@ function Show-DuplicateGroups {
         }
     }
 }
+
+function Remove-ApplicationCompletely {
+    <#
+    .SYNOPSIS
+        Completely removes an application including all traces
+    .DESCRIPTION
+        Performs deep removal of applications by uninstalling the program,
+        removing files, cleaning registry entries, and removing user data
+    .PARAMETER App
+        Application object with details about the program to remove
+    #>
+    param([PSCustomObject]$App)
+
+    Write-Host "STEP 1: Uninstalling application..." -ForegroundColor Yellow
+    $uninstallSuccess = $false
+
+    if ($App.Type -eq "Store") {
+        try {
+            Remove-AppxPackage -Package $App.PackageFullName -AllUsers -ErrorAction Stop
+            $uninstallSuccess = $true
+            Write-Host "SUCCESS: Store app uninstalled" -ForegroundColor Green
+        } catch {
+            Write-Host "ERROR: Failed to uninstall store app" -ForegroundColor Red
+        }
+    } else {
+        if ($App.UninstallString) {
+            try {
+                $uninstallCmd = $App.UninstallString
+                if ($uninstallCmd -like "*msiexec*") {
+                    $productCode = $uninstallCmd -replace ".*\{", "{" -replace "\}.*", "}"
+                    Start-Process "msiexec.exe" -ArgumentList "/x", $productCode, "/quiet", "/norestart" -Wait -NoNewWindow
+                } else {
+                    Start-Process $uninstallCmd -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+                }
+                $uninstallSuccess = $true
+                Write-Host "SUCCESS: Desktop app uninstalled" -ForegroundColor Green
+            } catch {
+                Write-Host "ERROR: Failed to uninstall desktop app" -ForegroundColor Red
+            }
+        }
+    }
+
+    Write-Host "STEP 2: Removing installation files..." -ForegroundColor Yellow
+    if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
+        try {
+            Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
+            Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
+        } catch {
+            Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
+        }
+    }
+
+    Write-Host "STEP 3: Cleaning registry entries..." -ForegroundColor Yellow
+    $regPathsToClean = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\$($App.Publisher)",
+        "HKCU:\SOFTWARE\$($App.Publisher)",
+        "HKLM:\SOFTWARE\$($App.Name)",
+        "HKCU:\SOFTWARE\$($App.Name)"
+    )
+
+    foreach ($regPath in $regPathsToClean) {
+        try {
+            if (Test-Path $regPath) {
+                $subKeys = Get-ChildItem $regPath -ErrorAction SilentlyContinue
+                foreach ($key in $subKeys) {
+                    $displayName = (Get-ItemProperty $key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+                    if ($displayName -like "*$($App.Name)*") {
+                        Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+                        Write-Host "  Cleaned registry key: $($key.Name)" -ForegroundColor Gray
+                    }
+                }
+            }
+        } catch {}
+    }
+
+    Write-Host "STEP 4: Removing user data and settings..." -ForegroundColor Yellow
+    $userDataPaths = @(
+        "$env:APPDATA\$($App.Name)",
+        "$env:LOCALAPPDATA\$($App.Name)",
+        "$env:APPDATA\$($App.Publisher)",
+        "$env:LOCALAPPDATA\$($App.Publisher)",
+        "$env:USERPROFILE\Documents\$($App.Name)"
+    )
+
+    foreach ($path in $userDataPaths) {
+        if (Test-Path $path) {
+            try {
+                Remove-Item $path -Recurse -Force -ErrorAction Stop
+                Write-Host "  Removed user data: $path" -ForegroundColor Gray
+            } catch {}
+        }
+    }
+
+    Write-Host "STEP 5: Cleaning temporary files and caches..." -ForegroundColor Yellow
+    $tempPaths = @(
+        "$env:TEMP\$($App.Name)",
+        "$env:TEMP\$($App.Publisher)",
+        "$env:LOCALAPPDATA\Temp\$($App.Name)"
+    )
+
+    foreach ($path in $tempPaths) {
+        if (Test-Path $path) {
+            try {
+                Remove-Item $path -Recurse -Force -ErrorAction Stop
+                Write-Host "  Cleaned temp files: $path" -ForegroundColor Gray
+            } catch {}
+        }
+    }
+
+    Write-Host "COMPLETE REMOVAL FINISHED!" -ForegroundColor Green
+    Write-Host "Application '$($App.Name)' has been completely removed from the system." -ForegroundColor Green
+}
+
+function Find-ApplicationLeftovers {
+    <#
+    .SYNOPSIS
+        Scans for leftover application traces on the system
+    .DESCRIPTION
+        Looks for empty folders and other remnants left behind by uninstalled applications
+    .RETURNS
+        Array of leftover items found on the system
+    #>
+    $leftovers = @()
+
+    # Check common leftover locations
+    $checkPaths = @(
+        "$env:ProgramFiles",
+        "$env:ProgramFiles(x86)",
+        "$env:APPDATA",
+        "$env:LOCALAPPDATA"
+    )
+
+    foreach ($basePath in $checkPaths) {
+        if (Test-Path $basePath) {
+            Get-ChildItem $basePath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                $items = Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue
+                if ($items.Count -eq 0) {
+                    $leftovers += @{
+                        Type = "Empty Folder"
+                        Path = $_.FullName
+                    }
+                }
+            }
+        }
+    }
+
+    return $leftovers
+}
+
+function Clean-ApplicationLeftovers {
+    <#
+    .SYNOPSIS
+        Removes leftover application traces from the system
+    .DESCRIPTION
+        Cleans up empty folders and other remnants identified by Find-ApplicationLeftovers
+    .PARAMETER Leftovers
+        Array of leftover items to clean up
+    #>
+    param([array]$Leftovers)
+
+    $cleaned = 0
+    foreach ($leftover in $Leftovers) {
+        try {
+            Remove-Item $leftover.Path -Force -Recurse -ErrorAction Stop
+            Write-Host "SUCCESS: Cleaned $($leftover.Type): $($leftover.Path)" -ForegroundColor Green
+            $cleaned++
+        } catch {
+            Write-Host "ERROR: Could not clean $($leftover.Path)" -ForegroundColor Red
+        }
+    }
+
+    Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
+}
 #endregion
 
 #region SYSTEM STARTUP & EXTERNAL TOOLS
@@ -1505,160 +1681,6 @@ do {
                 }
 
             } while ($appRemoverChoice -ne '0')
-
-            # Function to completely remove an application
-            function Remove-ApplicationCompletely {
-                param([PSCustomObject]$App)
-
-                Write-Host "STEP 1: Uninstalling application..." -ForegroundColor Yellow
-                $uninstallSuccess = $false
-
-                if ($App.Type -eq "Store") {
-                    try {
-                        Remove-AppxPackage -Package $App.PackageFullName -AllUsers -ErrorAction Stop
-                        $uninstallSuccess = $true
-                        Write-Host "SUCCESS: Store app uninstalled" -ForegroundColor Green
-                    } catch {
-                        Write-Host "ERROR: Failed to uninstall store app" -ForegroundColor Red
-                    }
-                } else {
-                    if ($App.UninstallString) {
-                        try {
-                            $uninstallCmd = $App.UninstallString
-                            if ($uninstallCmd -like "*msiexec*") {
-                                $productCode = $uninstallCmd -replace ".*\{", "{" -replace "\}.*", "}"
-                                Start-Process "msiexec.exe" -ArgumentList "/x", $productCode, "/quiet", "/norestart" -Wait -NoNewWindow
-                            } else {
-                                Start-Process $uninstallCmd -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction SilentlyContinue
-                            }
-                            $uninstallSuccess = $true
-                            Write-Host "SUCCESS: Desktop app uninstalled" -ForegroundColor Green
-                        } catch {
-                            Write-Host "ERROR: Failed to uninstall desktop app" -ForegroundColor Red
-                        }
-                    }
-                }
-
-                Write-Host "STEP 2: Removing installation files..." -ForegroundColor Yellow
-                if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
-                    try {
-                        Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
-                        Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
-                    } catch {
-                        Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
-                    }
-                }
-
-                Write-Host "STEP 3: Cleaning registry entries..." -ForegroundColor Yellow
-                $regPathsToClean = @(
-                    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-                    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                    "HKLM:\SOFTWARE\$($App.Publisher)",
-                    "HKCU:\SOFTWARE\$($App.Publisher)",
-                    "HKLM:\SOFTWARE\$($App.Name)",
-                    "HKCU:\SOFTWARE\$($App.Name)"
-                )
-
-                foreach ($regPath in $regPathsToClean) {
-                    try {
-                        if (Test-Path $regPath) {
-                            $subKeys = Get-ChildItem $regPath -ErrorAction SilentlyContinue
-                            foreach ($key in $subKeys) {
-                                $displayName = (Get-ItemProperty $key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-                                if ($displayName -like "*$($App.Name)*") {
-                                    Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
-                                    Write-Host "  Cleaned registry key: $($key.Name)" -ForegroundColor Gray
-                                }
-                            }
-                        }
-                    } catch {}
-                }
-
-                Write-Host "STEP 4: Removing user data and settings..." -ForegroundColor Yellow
-                $userDataPaths = @(
-                    "$env:APPDATA\$($App.Name)",
-                    "$env:LOCALAPPDATA\$($App.Name)",
-                    "$env:APPDATA\$($App.Publisher)",
-                    "$env:LOCALAPPDATA\$($App.Publisher)",
-                    "$env:USERPROFILE\Documents\$($App.Name)"
-                )
-
-                foreach ($path in $userDataPaths) {
-                    if (Test-Path $path) {
-                        try {
-                            Remove-Item $path -Recurse -Force -ErrorAction Stop
-                            Write-Host "  Removed user data: $path" -ForegroundColor Gray
-                        } catch {}
-                    }
-                }
-
-                Write-Host "STEP 5: Cleaning temporary files and caches..." -ForegroundColor Yellow
-                $tempPaths = @(
-                    "$env:TEMP\$($App.Name)",
-                    "$env:TEMP\$($App.Publisher)",
-                    "$env:LOCALAPPDATA\Temp\$($App.Name)"
-                )
-
-                foreach ($path in $tempPaths) {
-                    if (Test-Path $path) {
-                        try {
-                            Remove-Item $path -Recurse -Force -ErrorAction Stop
-                            Write-Host "  Cleaned temp files: $path" -ForegroundColor Gray
-                        } catch {}
-                    }
-                }
-
-                Write-Host "COMPLETE REMOVAL FINISHED!" -ForegroundColor Green
-                Write-Host "Application '$($App.Name)' has been completely removed from the system." -ForegroundColor Green
-            }
-
-            # Function to find application leftovers
-            function Find-ApplicationLeftovers {
-                $leftovers = @()
-
-                # Check common leftover locations
-                $checkPaths = @(
-                    "$env:ProgramFiles",
-                    "$env:ProgramFiles(x86)",
-                    "$env:APPDATA",
-                    "$env:LOCALAPPDATA"
-                )
-
-                foreach ($basePath in $checkPaths) {
-                    if (Test-Path $basePath) {
-                        Get-ChildItem $basePath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-                            $items = Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue
-                            if ($items.Count -eq 0) {
-                                $leftovers += @{
-                                    Type = "Empty Folder"
-                                    Path = $_.FullName
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return $leftovers
-            }
-
-            # Function to clean application leftovers
-            function Clean-ApplicationLeftovers {
-                param([array]$Leftovers)
-
-                $cleaned = 0
-                foreach ($leftover in $Leftovers) {
-                    try {
-                        Remove-Item $leftover.Path -Force -Recurse -ErrorAction Stop
-                        Write-Host "SUCCESS: Cleaned $($leftover.Type): $($leftover.Path)" -ForegroundColor Green
-                        $cleaned++
-                    } catch {
-                        Write-Host "ERROR: Could not clean $($leftover.Path)" -ForegroundColor Red
-                    }
-                }
-
-                Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
-            }
         }
         '11' {
             Write-Host "`nDuplicate File Finder" -ForegroundColor Cyan

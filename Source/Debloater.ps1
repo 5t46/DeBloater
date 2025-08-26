@@ -447,6 +447,7 @@ do {
             $toolUrl = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20&%20E.exe"
             $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D & E.exe"
             Write-Host "Downloading Defender control tool..." -ForegroundColor Cyan
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             try {
                 Invoke-WebRequest -Uri $toolUrl -OutFile $toolPath -UseBasicParsing -ErrorAction Stop
                 Write-Host "Tool downloaded successfully." -ForegroundColor Green

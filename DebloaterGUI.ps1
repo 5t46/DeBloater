@@ -237,26 +237,32 @@ Postal Code: $($response.postal)
 # GUI Creation Functions
 function Create-MainForm {
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "🚀 Debloater Tool v2.0 - By ! Star"
-    $form.Size = New-Object System.Drawing.Size(800, 600)
+    $form.Text = "Debloater Tool v2.0 - By ! Star"
+    $form.Size = New-Object System.Drawing.Size(820, 650)
     $form.StartPosition = "CenterScreen"
     $form.FormBorderStyle = "FixedSingle"
     $form.MaximizeBox = $false
     $form.BackColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
-    $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("$env:SystemRoot\System32\cleanmgr.exe")
+
+    # Try to set icon, but don't fail if it doesn't work
+    try {
+        $form.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon("$env:SystemRoot\System32\cleanmgr.exe")
+    } catch {
+        # Icon loading failed, continue without icon
+    }
 
     return $form
 }
 
 function Create-HeaderPanel {
     $panel = New-Object System.Windows.Forms.Panel
-    $panel.Size = New-Object System.Drawing.Size(780, 80)
+    $panel.Size = New-Object System.Drawing.Size(800, 80)
     $panel.Location = New-Object System.Drawing.Point(10, 10)
     $panel.BackColor = [System.Drawing.Color]::FromArgb(70, 130, 180)
 
     # Title label
     $titleLabel = New-Object System.Windows.Forms.Label
-    $titleLabel.Text = "🚀 Debloater Tool v2.0"
+    $titleLabel.Text = "Debloater Tool v2.0"
     $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 18, [System.Drawing.FontStyle]::Bold)
     $titleLabel.ForeColor = [System.Drawing.Color]::White
     $titleLabel.Location = New-Object System.Drawing.Point(20, 10)
@@ -277,29 +283,29 @@ function Create-HeaderPanel {
 
 function Create-ButtonsPanel {
     $panel = New-Object System.Windows.Forms.Panel
-    $panel.Size = New-Object System.Drawing.Size(780, 300)
+    $panel.Size = New-Object System.Drawing.Size(800, 320)
     $panel.Location = New-Object System.Drawing.Point(10, 100)
     $panel.BackColor = [System.Drawing.Color]::White
     $panel.BorderStyle = "FixedSingle"
 
-    # Create buttons
+    # Create buttons without emoji icons for better compatibility
     $buttons = @(
-        @{Text="🗂️ Clear Temp Files"; Action="TempFiles"; Color=[System.Drawing.Color]::FromArgb(46, 125, 50)},
-        @{Text="🌐 Clear Browser Cache"; Action="BrowserCache"; Color=[System.Drawing.Color]::FromArgb(33, 150, 243)},
-        @{Text="🗑️ Clear Recycle Bin"; Action="RecycleBin"; Color=[System.Drawing.Color]::FromArgb(156, 39, 176)},
-        @{Text="🧠 Memory Optimizer"; Action="Memory"; Color=[System.Drawing.Color]::FromArgb(0, 188, 212)},
-        @{Text="🌍 Get IP Information"; Action="IPInfo"; Color=[System.Drawing.Color]::FromArgb(255, 152, 0)},
-        @{Text="⚡ Full Cleanup"; Action="FullCleanup"; Color=[System.Drawing.Color]::FromArgb(244, 67, 54)},
-        @{Text="📱 Windows Apps"; Action="WindowsApps"; Color=[System.Drawing.Color]::FromArgb(76, 175, 80)},
-        @{Text="🔧 Startup Manager"; Action="StartupManager"; Color=[System.Drawing.Color]::FromArgb(63, 81, 181)},
-        @{Text="❌ Exit"; Action="Exit"; Color=[System.Drawing.Color]::FromArgb(96, 125, 139)}
+        @{Text="Clear Temp Files"; Action="TempFiles"; Color=[System.Drawing.Color]::FromArgb(46, 125, 50)},
+        @{Text="Clear Browser Cache"; Action="BrowserCache"; Color=[System.Drawing.Color]::FromArgb(33, 150, 243)},
+        @{Text="Clear Recycle Bin"; Action="RecycleBin"; Color=[System.Drawing.Color]::FromArgb(156, 39, 176)},
+        @{Text="Memory Optimizer"; Action="Memory"; Color=[System.Drawing.Color]::FromArgb(0, 188, 212)},
+        @{Text="Get IP Information"; Action="IPInfo"; Color=[System.Drawing.Color]::FromArgb(255, 152, 0)},
+        @{Text="Full Cleanup"; Action="FullCleanup"; Color=[System.Drawing.Color]::FromArgb(244, 67, 54)},
+        @{Text="Windows Apps"; Action="WindowsApps"; Color=[System.Drawing.Color]::FromArgb(76, 175, 80)},
+        @{Text="Startup Manager"; Action="StartupManager"; Color=[System.Drawing.Color]::FromArgb(63, 81, 181)},
+        @{Text="Exit"; Action="Exit"; Color=[System.Drawing.Color]::FromArgb(96, 125, 139)}
     )
 
     $x = 20
     $y = 20
-    $buttonWidth = 230
-    $buttonHeight = 45
-    $spacing = 15
+    $buttonWidth = 240
+    $buttonHeight = 50
+    $spacing = 20
 
     foreach ($buttonInfo in $buttons) {
         $button = New-Object System.Windows.Forms.Button
@@ -334,7 +340,7 @@ function Create-ButtonsPanel {
 
         # Position next button
         $x += $buttonWidth + $spacing
-        if ($x + $buttonWidth > 750) {
+        if ($x + $buttonWidth > 780) {
             $x = 20
             $y += $buttonHeight + $spacing
         }
@@ -345,8 +351,8 @@ function Create-ButtonsPanel {
 
 function Create-StatusPanel {
     $panel = New-Object System.Windows.Forms.Panel
-    $panel.Size = New-Object System.Drawing.Size(780, 180)
-    $panel.Location = New-Object System.Drawing.Point(10, 410)
+    $panel.Size = New-Object System.Drawing.Size(800, 200)
+    $panel.Location = New-Object System.Drawing.Point(10, 430)
     $panel.BackColor = [System.Drawing.Color]::White
     $panel.BorderStyle = "FixedSingle"
 
@@ -360,7 +366,7 @@ function Create-StatusPanel {
 
     # Progress bar
     $script:ProgressBar = New-Object System.Windows.Forms.ProgressBar
-    $script:ProgressBar.Size = New-Object System.Drawing.Size(760, 25)
+    $script:ProgressBar.Size = New-Object System.Drawing.Size(780, 25)
     $script:ProgressBar.Location = New-Object System.Drawing.Point(10, 35)
     $script:ProgressBar.Style = "Continuous"
     $panel.Controls.Add($script:ProgressBar)
@@ -369,7 +375,7 @@ function Create-StatusPanel {
     $script:LogTextBox = New-Object System.Windows.Forms.TextBox
     $script:LogTextBox.Multiline = $true
     $script:LogTextBox.ScrollBars = "Vertical"
-    $script:LogTextBox.Size = New-Object System.Drawing.Size(760, 110)
+    $script:LogTextBox.Size = New-Object System.Drawing.Size(780, 130)
     $script:LogTextBox.Location = New-Object System.Drawing.Point(10, 65)
     $script:LogTextBox.Font = New-Object System.Drawing.Font("Consolas", 9)
     $script:LogTextBox.ReadOnly = $true

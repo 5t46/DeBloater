@@ -342,7 +342,7 @@ do {
             try {
                 $response = Invoke-RestMethod -Uri $url -ErrorAction Stop
                 Write-Host "========= Public IP Information =========" -ForegroundColor Cyan
-                Write-Host "IP Address   : $($response.ip)" -ForegroundColor Yellow
+                Write-Host "IP A1ddress   : $($response.ip)" -ForegroundColor Yellow
                 Write-Host "Hostname     : $($response.hostname)" -ForegroundColor Yellow
                 Write-Host "City         : $($response.city)" -ForegroundColor Yellow
                 Write-Host "Region       : $($response.region)" -ForegroundColor Yellow

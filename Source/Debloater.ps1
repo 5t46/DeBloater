@@ -444,21 +444,98 @@ do {
             Write-Host "Choose action:" -ForegroundColor Cyan
             Write-Host "1. Disable Windows Defender"
             Write-Host "2. Enable Windows Defender"
-            $toolUrl = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20&%20E.exe"
-            $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D & E.exe"
+
+            # Prefer a file name without special characters to avoid quoting/AV weirdness
+            $toolUrl  = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20%26%20E.exe"
+            $pageUrl  = "https://github.com/5t42/DeBloater/tree/main/Source"
+            $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D and E.exe"
+
             Write-Host "Downloading Defender control tool..." -ForegroundColor Cyan
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+            # Ensure TLS 1.2 and set a robust User-Agent for GitHub raw
             try {
-                Invoke-WebRequest -Uri $toolUrl -OutFile $toolPath -UseBasicParsing -ErrorAction Stop
-                Write-Host "Tool downloaded successfully." -ForegroundColor Green
-                Write-Host "Launching tool..." -ForegroundColor Cyan
-                Start-Process -FilePath $toolPath -Wait
-                Write-Host "Tool closed. Deleting..." -ForegroundColor Yellow
-                Remove-Item $toolPath -Force -ErrorAction SilentlyContinue
-                Write-Host "Tool deleted from Downloads." -ForegroundColor Green
-            } catch {
-                Write-Host "Error downloading or running the tool: $_" -ForegroundColor Red
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            } catch { }
+
+            $headers = @{
+                "User-Agent" = "Mozilla/5.0 (Windows NT; Win64; x64) Debloater/1.0"
+                "Accept"     = "*/*"
             }
+
+            $downloadOk = $false
+            $lastError  = $null
+
+            # Local helper to attempt Invoke-WebRequest with retries
+            $invokeDownload = {
+                param($uri, $outFile, $maxAttempts = 3)
+                $attempt = 0
+                while (-not $downloadOk -and $attempt -lt $maxAttempts) {
+                    $attempt++
+                    try {
+                        Invoke-WebRequest -Uri $uri -OutFile $outFile -Headers $headers -UseBasicParsing -ErrorAction Stop
+                        if ((Test-Path $outFile) -and ((Get-Item $outFile).Length -gt 0)) {
+                            $script:downloadOk = $true
+                            return
+                        } else {
+                            Remove-Item $outFile -Force -ErrorAction SilentlyContinue
+                            Start-Sleep -Seconds ([Math]::Min(5, $attempt * 2))
+                        }
+                    } catch {
+                        $script:lastError = $_
+                        Start-Sleep -Seconds ([Math]::Min(5, $attempt * 2))
+                    }
+                }
+            }
+
+            # Local helper to attempt BITS as a fallback
+            $bitsDownload = {
+                param($uri, $outFile)
+                try {
+                    if (Get-Command -Name Start-BitsTransfer -ErrorAction SilentlyContinue) {
+                        Start-BitsTransfer -Source $uri -Destination $outFile -ErrorAction Stop
+                        if ((Test-Path $outFile) -and ((Get-Item $outFile).Length -gt 0)) {
+                            $script:downloadOk = $true
+                        } else {
+                            Remove-Item $outFile -Force -ErrorAction SilentlyContinue
+                        }
+                    }
+                } catch {
+                    $script:lastError = $_
+                }
+            }
+
+            try {
+                # Clean any previous file
+                Remove-Item $toolPath -Force -ErrorAction SilentlyContinue
+
+                # Try Invoke-WebRequest with retries
+                & $invokeDownload $toolUrl $toolPath 3
+
+                # If still not ok, try BITS fallback
+                if (-not $downloadOk) {
+                    & $bitsDownload $toolUrl $toolPath
+                }
+
+                if ($downloadOk) {
+                    try { Unblock-File -Path $toolPath -ErrorAction SilentlyContinue } catch { }
+                    Write-Host "Tool downloaded successfully." -ForegroundColor Green
+                    Write-Host "Launching tool..." -ForegroundColor Cyan
+                    Start-Process -FilePath $toolPath -Wait
+                    Write-Host "Tool closed. Deleting..." -ForegroundColor Yellow
+                    Remove-Item $toolPath -Force -ErrorAction SilentlyContinue
+                    Write-Host "Tool deleted from Downloads." -ForegroundColor Green
+                } else {
+                    Write-Host "Error downloading or running the tool." -ForegroundColor Red
+                    if ($lastError) {
+                        Write-Host ("Details: {0}" -f $lastError.Exception.Message) -ForegroundColor DarkRed
+                    }
+                    Write-Host "Opening the download page in your browser for manual download..." -ForegroundColor Yellow
+                    try { Start-Process $pageUrl } catch { }
+                }
+            } catch {
+                Write-Host ("Unexpected error: {0}" -f $_) -ForegroundColor Red
+            }
+
             Wait-ForUser
         }
     }

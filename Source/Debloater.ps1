@@ -186,7 +186,7 @@ function Show-DuplicateResults {
     param([array]$Duplicates)
 
     if ($Duplicates.Count -eq 0) {
-        Write-Host "✓ No duplicate files found!" -ForegroundColor Green
+        Write-Host " No duplicate files found!" -ForegroundColor Green
         return
     }
 

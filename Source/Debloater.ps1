@@ -32,6 +32,70 @@ function Wait-ForUser ($msg = "Press Enter to continue...") {
     Read-Host $msg | Out-Null
 }
 
+function Show-MenuWithKeyboard {
+    param(
+        [array]$MenuItems,
+        [string]$Title = "Select an option:",
+        [int]$DefaultSelection = 0
+    )
+
+    $selectedIndex = $DefaultSelection
+    $maxIndex = $MenuItems.Count - 1
+
+    while ($true) {
+        Clear-Host
+        Show-Header
+
+        Write-Host $Title -ForegroundColor Cyan
+        Write-Host ""
+
+        for ($i = 0; $i -lt $MenuItems.Count; $i++) {
+            $item = $MenuItems[$i]
+            if ($i -eq $selectedIndex) {
+                Write-Host ">> " -NoNewline -ForegroundColor Yellow
+                Write-Host "$($item.Number). $($item.Text)" -ForegroundColor $item.Color -BackgroundColor DarkBlue
+            } else {
+                Write-Host "   $($item.Number). $($item.Text)" -ForegroundColor $item.Color
+            }
+        }
+
+        Write-Host ""
+        Write-Host "Use ↑↓ arrow keys to navigate, Enter to select, or type number directly:" -ForegroundColor Gray
+
+        # Check if a key is available
+        while (-not $Host.UI.RawUI.KeyAvailable -and -not [Console]::KeyAvailable) {
+            Start-Sleep -Milliseconds 50
+        }
+
+        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+        switch ($key.VirtualKeyCode) {
+            38 { # Up arrow
+                $selectedIndex = if ($selectedIndex -eq 0) { $maxIndex } else { $selectedIndex - 1 }
+            }
+            40 { # Down arrow
+                $selectedIndex = if ($selectedIndex -eq $maxIndex) { 0 } else { $selectedIndex + 1 }
+            }
+            13 { # Enter
+                return $MenuItems[$selectedIndex].Number
+            }
+            27 { # Escape
+                return '0'
+            }
+            default {
+                # Check if it's a number key
+                $numChar = $key.Character
+                if ($numChar -match '^[0-9]$') {
+                    $matchingItem = $MenuItems | Where-Object { $_.Number -eq $numChar }
+                    if ($matchingItem) {
+                        return $numChar
+                    }
+                }
+            }
+        }
+    }
+}
+
 Show-Header
 
 $u1 = 'aHR0cHM6Ly9naXRodWIuY29tLzV0NDIvRGVCbG9hdGVyL3Jhdy9yZWZzL2hlYWRzL21haW4vU291cmNlL0RlYmxvYXRlci5leGU='

@@ -442,7 +442,7 @@ do {
         }
         '10' {
             Write-Host "Choose action:" -ForegroundColor Cyan
-            Write-Host "1. Disable Windows Defender"
+            Write-Host "1. 111Disable Windows Defender"
             Write-Host "2. Enable Windows Defender"
             $toolUrl = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20&%20E.exe"
             $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D & E.exe"

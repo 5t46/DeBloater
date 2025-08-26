@@ -908,35 +908,6 @@ do {
                 Write-Host "Organization : $($response.org)" -ForegroundColor Yellow
                 Write-Host "Postal Code  : $($response.postal)" -ForegroundColor Yellow
                 Write-Host "=========================================" -ForegroundColor Cyan
-                Write-Host "1. Disable (remove from startup)" -ForegroundColor Red
-                Write-Host "2. Enable (add to startup)" -ForegroundColor Green
-                $action = Read-Host "Choose action (1 or 2, or 0 to return)"
-                if ($action -eq '0') { continue }
-                if ($action -eq '1') {
-                    try {
-                        $regPaths = @(
-                            'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run',
-                            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run',
-                            'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'
-                        )
-                        foreach ($reg in $regPaths) {
-                            Remove-ItemProperty -Path $reg -Name $selectedItem.Name -ErrorAction SilentlyContinue
-                        }
-                        Write-Host "Startup item disabled (removed from registry)." -ForegroundColor Green
-                    } catch {
-                        Write-Host "Failed to disable startup item." -ForegroundColor Red
-                    }
-                } elseif ($action -eq '2') {
-                    try {
-                        $regPath = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-                        Set-ItemProperty -Path $regPath -Name $selectedItem.Name -Value $selectedItem.Command
-                        Write-Host "Startup item enabled (added to current user startup)." -ForegroundColor Green
-                    } catch {
-                        Write-Host "Failed to enable startup item." -ForegroundColor Red
-                    }
-                } else {
-                    Write-Host "Invalid action." -ForegroundColor Red
-                }
             } catch {
                 Write-Host "Failed to retrieve public IP information: $_" -ForegroundColor Red
             }

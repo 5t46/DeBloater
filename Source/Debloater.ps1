@@ -513,8 +513,8 @@ do {
     Write-Host "8. Startup Manager " -NoNewline -ForegroundColor White
     Write-Host "( Enable/Disable Startup Programs )" -ForegroundColor Magenta
     Write-Host "9. Advanced Program Uninstaller" -ForegroundColor White
-    Write-Host "10. Reinstall default Windows apps " -NoNewline -ForegroundColor White
-    Write-Host "( Short List )" -ForegroundColor Magenta
+    Write-Host "10. Complete App Remover " -NoNewline -ForegroundColor White
+    Write-Host "( Like Revo Uninstaller )" -ForegroundColor Magenta
     Write-Host "11. Duplicate File Finder " -NoNewline -ForegroundColor White
     Write-Host "( Find & Remove Duplicates )" -ForegroundColor Magenta
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 or 0 to exit"
@@ -1274,160 +1274,391 @@ do {
             } while ($uninstallChoice -ne '0')
         }
         '10' {
-            # Check Windows Defender Tamper Protection status (optional check)
-            $tamperStatus = $null
-            try {
-                # Try to get Windows Defender status
-                $defenderStatus = Get-MpComputerStatus -ErrorAction Stop
-                $tamperStatus = $defenderStatus.IsTamperProtected
-            } catch {
-                # Windows Defender may not be available or accessible
-                Write-Host "INFO: Windows Defender status check skipped (not available or accessible)" -ForegroundColor Gray
-                $tamperStatus = $false
-            }
+            Write-Host "`nComplete App Remover (Like Revo Uninstaller)" -ForegroundColor Cyan
+            Write-Host "=============================================" -ForegroundColor Cyan
+            Write-Host "This tool completely removes applications including:" -ForegroundColor Yellow
+            Write-Host "- Application files and folders" -ForegroundColor Gray
+            Write-Host "- Registry entries and keys" -ForegroundColor Gray
+            Write-Host "- User data and settings" -ForegroundColor Gray
+            Write-Host "- Temporary files and caches" -ForegroundColor Gray
+            Write-Host ""
 
-            # Show tamper protection warning only if it's actually enabled
-            if ($tamperStatus -eq $true) {
-                Write-Host "WARNING: Windows Defender Tamper Protection is enabled!" -ForegroundColor Red
-                Write-Host "You may need to disable it from Windows Security settings for some operations." -ForegroundColor Yellow
-                Write-Host ""
-            }
+            # Scan for all installed applications
+            Write-Host "Scanning for installed applications..." -ForegroundColor Cyan
+            $allApps = @()
 
-            # Define Windows apps array
-            $apps = @(
-                @{num=1; name='Microsoft.WindowsCalculator'; display='Calculator'},
-                @{num=2; name='Microsoft.Windows.Photos'; display='Photos'},
-                @{num=3; name='microsoft.windowscommunicationsapps'; display='Mail & Calendar'},
-                @{num=4; name='Microsoft.WindowsCamera'; display='Camera'},
-                @{num=5; name='Microsoft.MicrosoftStickyNotes'; display='Sticky Notes'},
-                @{num=6; name='Microsoft.Paint'; display='Paint'},
-                @{num=7; name='Microsoft.WindowsSoundRecorder'; display='Voice Recorder'},
-                @{num=8; name='Microsoft.ZuneMusic'; display='Groove Music'},
-                @{num=9; name='Microsoft.ZuneVideo'; display='Movies & TV'},
-                @{num=10; name='Microsoft.XboxApp'; display='Xbox'},
-                @{num=11; name='Microsoft.BingWeather'; display='Weather'},
-                @{num=12; name='Microsoft.MSPaint'; display='Paint 3D'},
-                @{num=13; name='Microsoft.People'; display='People'},
-                @{num=14; name='Microsoft.GetHelp'; display='Get Help'},
-                @{num=15; name='Microsoft.Getstarted'; display='Get Started'}
+            # Get regular Windows programs from registry
+            $regPaths = @(
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
             )
-            Write-Host "\nSelect an app to reinstall (enter the number or 0 to return):" -ForegroundColor Cyan
-            foreach ($app in $apps) {
-                $pkg = Get-AppxPackage -AllUsers | Where-Object { $_.Name -eq $app.name }
-                $status = if ($pkg) { '[Installed]' } else { '[Not Installed]' }
-                Write-Host ("{0}. {1} {2}" -f $app.num, $app.display, $status) -ForegroundColor Green
-                if ($pkg) {
-                    $size = if ($pkg.InstallLocation -and (Test-Path $pkg.InstallLocation)) {
+
+            foreach ($path in $regPaths) {
+                try {
+                    Get-ItemProperty $path -ErrorAction SilentlyContinue | ForEach-Object {
+                        if ($_.DisplayName -and $_.DisplayName.Trim() -ne '') {
+                            $size = if ($_.EstimatedSize) { [math]::Round($_.EstimatedSize / 1024, 2) } else { 0 }
+                            $allApps += [PSCustomObject]@{
+                                Name = $_.DisplayName
+                                Version = $_.DisplayVersion
+                                Publisher = $_.Publisher
+                                InstallLocation = $_.InstallLocation
+                                UninstallString = $_.UninstallString
+                                SizeMB = $size
+                                Type = "Desktop"
+                                RegistryKey = $_.PSPath
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            # Get Windows Store Apps
+            try {
+                Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | ForEach-Object {
+                    $size = if ($_.InstallLocation -and (Test-Path $_.InstallLocation)) {
                         try {
-                            $bytes = (Get-ChildItem -Path $pkg.InstallLocation -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-                            if ($bytes) { [math]::Round($bytes/1MB,2) } else { 0 }
+                            $bytes = (Get-ChildItem -Path $_.InstallLocation -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                            if ($bytes) { [math]::Round($bytes/1MB, 2) } else { 0 }
                         } catch { 0 }
                     } else { 0 }
-                    Write-Host ("    Path: {0}" -f $pkg.InstallLocation) -ForegroundColor DarkGray
-                    Write-Host ("    Install Date: {0}" -f $pkg.InstallDate) -ForegroundColor DarkGray
-                    Write-Host ("    Size: {0} MB" -f $size) -ForegroundColor DarkGray
+
+                    $allApps += [PSCustomObject]@{
+                        Name = $_.Name
+                        Version = $_.Version
+                        Publisher = $_.PublisherDisplayName
+                        InstallLocation = $_.InstallLocation
+                        UninstallString = ""
+                        SizeMB = $size
+                        Type = "Store"
+                        PackageFullName = $_.PackageFullName
+                    }
+                }
+            } catch {}
+
+            $allApps = $allApps | Sort-Object Name
+
+            if ($allApps.Count -eq 0) {
+                Write-Host "No applications found." -ForegroundColor Yellow
+                Pause-For-User
+                continue
+            }
+
+            Write-Host "Found $($allApps.Count) installed applications" -ForegroundColor Green
+            Write-Host ""
+
+            do {
+                Write-Host "Complete App Remover Options:" -ForegroundColor Cyan
+                Write-Host "1. View all applications" -ForegroundColor White
+                Write-Host "2. Search applications" -ForegroundColor White
+                Write-Host "3. Remove application " -NoNewline -ForegroundColor White
+                Write-Host "( Complete Deep Clean )" -ForegroundColor Magenta
+                Write-Host "4. Batch remove multiple apps" -ForegroundColor White
+                Write-Host "5. Scan for leftover traces" -ForegroundColor White
+                Write-Host "0. Return to main menu" -ForegroundColor Gray
+
+                $appRemoverChoice = Read-Host "`nEnter choice (0-5)"
+
+                switch ($appRemoverChoice) {
+                    '1' {
+                        # View all applications
+                        Write-Host "`nInstalled Applications:" -ForegroundColor Cyan
+                        Write-Host ("=" * 90) -ForegroundColor Cyan
+                        Write-Host ("{0,-3} {1,-40} {2,-12} {3,-15} {4,-10} {5}" -f "No.", "Application Name", "Type", "Version", "Size (MB)", "Publisher") -ForegroundColor Yellow
+                        Write-Host ("-" * 90) -ForegroundColor Gray
+
+                        for ($i = 0; $i -lt $allApps.Count; $i++) {
+                            $app = $allApps[$i]
+                            $version = if ($app.Version) { $app.Version.Substring(0, [Math]::Min(12, $app.Version.Length)) } else { "Unknown" }
+                            $publisher = if ($app.Publisher) { $app.Publisher.Substring(0, [Math]::Min(15, $app.Publisher.Length)) } else { "Unknown" }
+                            $name = $app.Name.Substring(0, [Math]::Min(38, $app.Name.Length))
+                            Write-Host ("{0,-3} {1,-40} {2,-12} {3,-15} {4,-10} {5}" -f ($i+1), $name, $app.Type, $version, $app.SizeMB, $publisher) -ForegroundColor White
+                        }
+                    }
+
+                    '2' {
+                        # Search applications
+                        $searchTerm = Read-Host "Enter search term"
+                        $filtered = $allApps | Where-Object { $_.Name -like "*$searchTerm*" -or $_.Publisher -like "*$searchTerm*" }
+
+                        if ($filtered.Count -eq 0) {
+                            Write-Host "No applications found matching '$searchTerm'" -ForegroundColor Yellow
+                        } else {
+                            Write-Host "`nFound $($filtered.Count) matching applications:" -ForegroundColor Green
+                            for ($i = 0; $i -lt $filtered.Count; $i++) {
+                                Write-Host "$($i+1). $($filtered[$i].Name) [$($filtered[$i].Type)] - $($filtered[$i].SizeMB) MB" -ForegroundColor White
+                            }
+                        }
+                    }
+
+                    '3' {
+                        # Complete removal of single application
+                        Write-Host "`nSelect application to COMPLETELY REMOVE:" -ForegroundColor Red
+                        Write-Host "WARNING: This will remove ALL traces of the application!" -ForegroundColor Yellow
+                        Write-Host ""
+
+                        # Show first 20 apps for selection
+                        $displayCount = [Math]::Min(20, $allApps.Count)
+                        for ($i = 0; $i -lt $displayCount; $i++) {
+                            Write-Host "$($i+1). $($allApps[$i].Name) [$($allApps[$i].Type)] - $($allApps[$i].SizeMB) MB" -ForegroundColor White
+                        }
+
+                        if ($allApps.Count -gt 20) {
+                            Write-Host "... and $($allApps.Count - 20) more applications" -ForegroundColor Gray
+                            Write-Host "Use search function to find specific applications" -ForegroundColor Gray
+                        }
+
+                        $selection = Read-Host "`nEnter application number to remove (or 0 to return)"
+                        if ($selection -ne '0') {
+                            $index = [int]$selection - 1
+                            if ($index -ge 0 -and $index -lt $allApps.Count) {
+                                $selectedApp = $allApps[$index]
+
+                                Write-Host "`nApplication Details:" -ForegroundColor Cyan
+                                Write-Host "Name: $($selectedApp.Name)" -ForegroundColor White
+                                Write-Host "Type: $($selectedApp.Type)" -ForegroundColor White
+                                Write-Host "Version: $($selectedApp.Version)" -ForegroundColor White
+                                Write-Host "Publisher: $($selectedApp.Publisher)" -ForegroundColor White
+                                Write-Host "Size: $($selectedApp.SizeMB) MB" -ForegroundColor White
+                                Write-Host "Install Location: $($selectedApp.InstallLocation)" -ForegroundColor White
+
+                                Write-Host "`nWARNING: COMPLETE REMOVAL PROCESS" -ForegroundColor Red
+                                Write-Host "This will perform the following actions:" -ForegroundColor Yellow
+                                Write-Host "1. Uninstall the application" -ForegroundColor Gray
+                                Write-Host "2. Remove all installation files and folders" -ForegroundColor Gray
+                                Write-Host "3. Clean registry entries and keys" -ForegroundColor Gray
+                                Write-Host "4. Remove user data and settings" -ForegroundColor Gray
+                                Write-Host "5. Clean temporary files and caches" -ForegroundColor Gray
+
+                                $confirm = Read-Host "`nAre you ABSOLUTELY SURE you want to completely remove this application? (type 'YES' to confirm)"
+                                if ($confirm -eq 'YES') {
+                                    Write-Host "`nStarting complete removal process..." -ForegroundColor Red
+                                    Remove-ApplicationCompletely -App $selectedApp
+                                }
+                            }
+                        }
+                    }
+
+                    '4' {
+                        # Batch removal
+                        Write-Host "`nBatch Application Removal" -ForegroundColor Red
+                        Write-Host "WARNING: This will COMPLETELY remove multiple applications!" -ForegroundColor Yellow
+                        Write-Host ""
+                        Write-Host "First 20 applications:" -ForegroundColor Cyan
+
+                        $displayCount = [Math]::Min(20, $allApps.Count)
+                        for ($i = 0; $i -lt $displayCount; $i++) {
+                            Write-Host "$($i+1). $($allApps[$i].Name) [$($allApps[$i].Type)]" -ForegroundColor White
+                        }
+
+                        Write-Host "`nEnter application numbers separated by commas (e.g., 1,3,5)"
+                        $selection = Read-Host "Numbers"
+                        if ($selection -ne '0' -and $selection.Trim() -ne '') {
+                            $indices = $selection -split "," | ForEach-Object { ([int]$_.Trim()) - 1 }
+                            $validIndices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $allApps.Count }
+
+                            if ($validIndices.Count -gt 0) {
+                                Write-Host "`nApplications to completely remove:" -ForegroundColor Yellow
+                                foreach ($index in $validIndices) {
+                                    Write-Host "- $($allApps[$index].Name)" -ForegroundColor White
+                                }
+
+                                $confirm = Read-Host "`nCompletely remove all these applications? (type 'YES' to confirm)"
+                                if ($confirm -eq 'YES') {
+                                    Write-Host "`nStarting batch removal process..." -ForegroundColor Red
+                                    foreach ($index in $validIndices) {
+                                        Remove-ApplicationCompletely -App $allApps[$index]
+                                        Write-Host ""
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    '5' {
+                        # Scan for leftover traces
+                        Write-Host "`nScanning for leftover application traces..." -ForegroundColor Cyan
+                        $leftovers = Find-ApplicationLeftovers
+
+                        if ($leftovers.Count -gt 0) {
+                            Write-Host "Found $($leftovers.Count) leftover traces:" -ForegroundColor Yellow
+                            foreach ($leftover in $leftovers) {
+                                Write-Host "- $($leftover.Type): $($leftover.Path)" -ForegroundColor Gray
+                            }
+
+                            $cleanLeftovers = Read-Host "`nRemove all leftover traces? (y/n)"
+                            if ($cleanLeftovers -eq 'y' -or $cleanLeftovers -eq 'Y') {
+                                Clean-ApplicationLeftovers -Leftovers $leftovers
+                            }
+                        } else {
+                            Write-Host "No leftover traces found!" -ForegroundColor Green
+                        }
+                    }
+
+                    '0' { break }
+                    default { Write-Host "Invalid choice." -ForegroundColor Red }
+                }
+
+                if ($appRemoverChoice -ne '0') {
+                    Pause-For-User
+                }
+
+            } while ($appRemoverChoice -ne '0')
+
+            # Function to completely remove an application
+            function Remove-ApplicationCompletely {
+                param([PSCustomObject]$App)
+
+                Write-Host "STEP 1: Uninstalling application..." -ForegroundColor Yellow
+                $uninstallSuccess = $false
+
+                if ($App.Type -eq "Store") {
+                    try {
+                        Remove-AppxPackage -Package $App.PackageFullName -AllUsers -ErrorAction Stop
+                        $uninstallSuccess = $true
+                        Write-Host "SUCCESS: Store app uninstalled" -ForegroundColor Green
+                    } catch {
+                        Write-Host "ERROR: Failed to uninstall store app" -ForegroundColor Red
+                    }
                 } else {
-                    Write-Host "    Not installed for any user." -ForegroundColor DarkGray
-                }
-            }
-            Write-Host ("{0}. All of the above" -f ($apps.Count+1)) -ForegroundColor Yellow
-            $appChoice = Read-Host ("Enter 1 to $($apps.Count+1), or 0 to return")
-            if ($appChoice -eq '0') { continue }
-            Write-Host "What do you want to do with the selected app(s)?" -ForegroundColor Cyan
-            Write-Host "1. Reinstall" -ForegroundColor Green
-            Write-Host "2. Uninstall (remove completely)" -ForegroundColor Red
-            $actionChoice = Read-Host "Enter 1 or 2 (or 0 to return)"
-            if ($actionChoice -eq '0') { continue }
-            function Restore-App($packageName, $displayName) {
-                try {
-                    $pkg = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
-                    if ($pkg) {
+                    if ($App.UninstallString) {
                         try {
-                            Add-AppxPackage -DisableDevelopmentMode -Register (Join-Path $pkg.InstallLocation 'AppXManifest.xml') -ErrorAction Stop
-                            Write-Host "SUCCESS: $displayName restored successfully." -ForegroundColor Green
+                            $uninstallCmd = $App.UninstallString
+                            if ($uninstallCmd -like "*msiexec*") {
+                                $productCode = $uninstallCmd -replace ".*\{", "{" -replace "\}.*", "}"
+                                Start-Process "msiexec.exe" -ArgumentList "/x", $productCode, "/quiet", "/norestart" -Wait -NoNewWindow
+                            } else {
+                                Start-Process $uninstallCmd -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+                            }
+                            $uninstallSuccess = $true
+                            Write-Host "SUCCESS: Desktop app uninstalled" -ForegroundColor Green
                         } catch {
-                            Write-Host "ERROR: Failed to restore $displayName - $($_.Exception.Message)" -ForegroundColor Red
+                            Write-Host "ERROR: Failed to uninstall desktop app" -ForegroundColor Red
                         }
-                    } else {
-                        Write-Host "WARNING: $displayName not found on the system." -ForegroundColor Yellow
                     }
-                } catch {
-                    Write-Host "ERROR: Could not access app packages - $($_.Exception.Message)" -ForegroundColor Red
                 }
-            }
-            function Uninstall-App($packageName, $displayName) {
-                $success = $false
 
-                try {
-                    # Try to remove from all users
-                    $pkgs = Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
-                    if ($pkgs) {
-                        foreach ($pkg in $pkgs) {
-                            try {
-                                Remove-AppxPackage -Package $pkg.PackageFullName -AllUsers -ErrorAction Stop
-                                $success = $true
-                            } catch {
-                                Write-Host "INFO: Could not remove from all users, trying current user..." -ForegroundColor Gray
+                Write-Host "STEP 2: Removing installation files..." -ForegroundColor Yellow
+                if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
+                    try {
+                        Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
+                        Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
+                    } catch {
+                        Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
+                    }
+                }
+
+                Write-Host "STEP 3: Cleaning registry entries..." -ForegroundColor Yellow
+                $regPathsToClean = @(
+                    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                    "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+                    "HKLM:\SOFTWARE\$($App.Publisher)",
+                    "HKCU:\SOFTWARE\$($App.Publisher)",
+                    "HKLM:\SOFTWARE\$($App.Name)",
+                    "HKCU:\SOFTWARE\$($App.Name)"
+                )
+
+                foreach ($regPath in $regPathsToClean) {
+                    try {
+                        if (Test-Path $regPath) {
+                            $subKeys = Get-ChildItem $regPath -ErrorAction SilentlyContinue
+                            foreach ($key in $subKeys) {
+                                $displayName = (Get-ItemProperty $key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+                                if ($displayName -like "*$($App.Name)*") {
+                                    Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+                                    Write-Host "  Cleaned registry key: $($key.Name)" -ForegroundColor Gray
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+
+                Write-Host "STEP 4: Removing user data and settings..." -ForegroundColor Yellow
+                $userDataPaths = @(
+                    "$env:APPDATA\$($App.Name)",
+                    "$env:LOCALAPPDATA\$($App.Name)",
+                    "$env:APPDATA\$($App.Publisher)",
+                    "$env:LOCALAPPDATA\$($App.Publisher)",
+                    "$env:USERPROFILE\Documents\$($App.Name)"
+                )
+
+                foreach ($path in $userDataPaths) {
+                    if (Test-Path $path) {
+                        try {
+                            Remove-Item $path -Recurse -Force -ErrorAction Stop
+                            Write-Host "  Removed user data: $path" -ForegroundColor Gray
+                        } catch {}
+                    }
+                }
+
+                Write-Host "STEP 5: Cleaning temporary files and caches..." -ForegroundColor Yellow
+                $tempPaths = @(
+                    "$env:TEMP\$($App.Name)",
+                    "$env:TEMP\$($App.Publisher)",
+                    "$env:LOCALAPPDATA\Temp\$($App.Name)"
+                )
+
+                foreach ($path in $tempPaths) {
+                    if (Test-Path $path) {
+                        try {
+                            Remove-Item $path -Recurse -Force -ErrorAction Stop
+                            Write-Host "  Cleaned temp files: $path" -ForegroundColor Gray
+                        } catch {}
+                    }
+                }
+
+                Write-Host "COMPLETE REMOVAL FINISHED!" -ForegroundColor Green
+                Write-Host "Application '$($App.Name)' has been completely removed from the system." -ForegroundColor Green
+            }
+
+            # Function to find application leftovers
+            function Find-ApplicationLeftovers {
+                $leftovers = @()
+
+                # Check common leftover locations
+                $checkPaths = @(
+                    "$env:ProgramFiles",
+                    "$env:ProgramFiles(x86)",
+                    "$env:APPDATA",
+                    "$env:LOCALAPPDATA"
+                )
+
+                foreach ($basePath in $checkPaths) {
+                    if (Test-Path $basePath) {
+                        Get-ChildItem $basePath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                            $items = Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue
+                            if ($items.Count -eq 0) {
+                                $leftovers += @{
+                                    Type = "Empty Folder"
+                                    Path = $_.FullName
+                                }
                             }
                         }
                     }
-
-                    # Try to remove from current user if all users failed
-                    if (-not $success) {
-                        $pkgCurrent = Get-AppxPackage -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $packageName }
-                        if ($pkgCurrent) {
-                            try {
-                                Remove-AppxPackage -Package $pkgCurrent.PackageFullName -ErrorAction Stop
-                                $success = $true
-                            } catch {
-                                Write-Host "INFO: Could not remove from current user, trying provisioned packages..." -ForegroundColor Gray
-                            }
-                        }
-                    }
-
-                    # Try to remove provisioned package
-                    if (-not $success) {
-                        $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $packageName }
-                        if ($prov) {
-                            try {
-                                Remove-AppxProvisionedPackage -Online -PackageName $prov.PackageName -ErrorAction Stop
-                                $success = $true
-                            } catch {
-                                # Final attempt failed
-                            }
-                        }
-                    }
-
-                    # Report results
-                    if ($success) {
-                        Write-Host "SUCCESS: $displayName uninstalled successfully." -ForegroundColor Green
-                    } else {
-                        Write-Host "WARNING: Could not fully uninstall $displayName. App may be protected or require additional permissions." -ForegroundColor Yellow
-                    }
-
-                } catch {
-                    Write-Host "ERROR: Failed to uninstall $displayName - $($_.Exception.Message)" -ForegroundColor Red
                 }
+
+                return $leftovers
             }
-            if ($appChoice -eq ($apps.Count+1).ToString()) {
-                foreach ($app in $apps) {
-                    if ($actionChoice -eq '1') {
-                        Restore-App $app.name $app.display
-                    } elseif ($actionChoice -eq '2') {
-                        Uninstall-App $app.name $app.display
+
+            # Function to clean application leftovers
+            function Clean-ApplicationLeftovers {
+                param([array]$Leftovers)
+
+                $cleaned = 0
+                foreach ($leftover in $Leftovers) {
+                    try {
+                        Remove-Item $leftover.Path -Force -Recurse -ErrorAction Stop
+                        Write-Host "SUCCESS: Cleaned $($leftover.Type): $($leftover.Path)" -ForegroundColor Green
+                        $cleaned++
+                    } catch {
+                        Write-Host "ERROR: Could not clean $($leftover.Path)" -ForegroundColor Red
                     }
                 }
-            } elseif (($appChoice -as [int]) -ge 1 -and ($appChoice -as [int]) -le $apps.Count) {
-                $selected = $apps[($appChoice -as [int])-1]
-                if ($actionChoice -eq '1') {
-                    Restore-App $selected.name $selected.display
-                } elseif ($actionChoice -eq '2') {
-                    Uninstall-App $selected.name $selected.display
-                }
-            } else {
-                Write-Host "Invalid choice." -ForegroundColor Yellow
+
+                Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
             }
-            Pause-For-User
         }
         '11' {
             Write-Host "`nDuplicate File Finder" -ForegroundColor Cyan

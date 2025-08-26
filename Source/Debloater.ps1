@@ -140,22 +140,22 @@ do {
     Write-Host ""
     Write-Host "What would you like to do?" -ForegroundColor Cyan
     Write-Host "1. Clear Temporary Files " -NoNewline -ForegroundColor White
-    Write-Host "( Choose Folders )" -ForegroundColor Blue
+    Write-Host "( Choose Folders )" -ForegroundColor Magenta
     Write-Host "2. Do Nothing " -NoNewline -ForegroundColor White
-    Write-Host "( Exit )" -ForegroundColor Blue
+    Write-Host "( Exit )" -ForegroundColor Magenta
     Write-Host "3. Full Cleanup " -NoNewline -ForegroundColor White
-    Write-Host "( Temp, Local Temp, Windows Temp, Prefetch )" -ForegroundColor Blue
+    Write-Host "( Temp, Local Temp, Windows Temp, Prefetch )" --ForegroundColor Magenta
     Write-Host "4. Clear Browser Cache " -NoNewline -ForegroundColor White
-    Write-Host "( Firefox, Chrome, Edge )" -ForegroundColor Blue
+    Write-Host "( Firefox, Chrome, Edge )" -ForegroundColor Magenta
     Write-Host "5. Clear Recycle Bin" -ForegroundColor White
     Write-Host "6. Memory Optimizer " -NoNewline -ForegroundColor White
-    Write-Host "( Clear Cached Memory )" -ForegroundColor Blue
+    Write-Host "( Clear Cached Memory )" -ForegroundColor Magenta
     Write-Host "7. Get Public IP Address with Details" -ForegroundColor White
     Write-Host "8. Startup Manager " -NoNewline -ForegroundColor White
-    Write-Host "( Enable/Disable Startup Programs )" -ForegroundColor Blue
+    Write-Host "( Enable/Disable Startup Programs )" -ForegroundColor Magenta
     Write-Host "9. Advanced Program Uninstaller" -ForegroundColor White
     Write-Host "10. Reinstall default Windows apps " -NoNewline -ForegroundColor White
-    Write-Host "( Short List )" -ForegroundColor Blue
+    Write-Host "( Short List )" -ForegroundColor Magenta
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 or 0 to exit"
     if ($choice -eq '0') { break }
 

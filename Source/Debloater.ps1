@@ -1209,7 +1209,7 @@ do {
                             $duplicates = Find-DuplicateFiles -Path $folderPath
                             Show-DuplicateResults -Duplicates $duplicates
                         } else {
-                            Write-Host "✗ Folder not found: $folderPath" -ForegroundColor Red
+                            Write-Host " Folder not found: $folderPath" -ForegroundColor Red
                         }
                     }
 

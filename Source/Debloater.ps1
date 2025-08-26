@@ -99,6 +99,205 @@ function Show-MenuWithKeyboard {
     }
 }
 
+# Duplicate File Finder Functions
+$script:LastDuplicateResults = @()
+
+function Get-FileHash-MD5 {
+    param([string]$FilePath)
+    try {
+        $hash = Get-FileHash -Path $FilePath -Algorithm MD5
+        return $hash.Hash
+    } catch {
+        return $null
+    }
+}
+
+function Find-DuplicateFiles {
+    param(
+        [string]$Path,
+        [switch]$Recursive
+    )
+
+    Write-Host "Scanning files..." -ForegroundColor Cyan
+
+    # Get all files with basic info
+    $files = if ($Recursive) {
+        Get-ChildItem -Path $Path -File -Recurse -ErrorAction SilentlyContinue
+    } else {
+        Get-ChildItem -Path $Path -File -ErrorAction SilentlyContinue
+    }
+
+    if ($files.Count -eq 0) {
+        Write-Host "No files found to scan." -ForegroundColor Yellow
+        return @()
+    }
+
+    Write-Host "Found $($files.Count) files. Analyzing..." -ForegroundColor Green
+
+    # Group files by size first (faster than hash)
+    $sizeGroups = $files | Group-Object Length | Where-Object { $_.Count -gt 1 -and $_.Name -gt 0 }
+
+    if ($sizeGroups.Count -eq 0) {
+        Write-Host "No potential duplicates found (by size)." -ForegroundColor Green
+        return @()
+    }
+
+    $duplicateGroups = @()
+    $totalGroups = $sizeGroups.Count
+    $currentGroup = 0
+
+    # Now check files with same size using hash
+    foreach ($sizeGroup in $sizeGroups) {
+        $currentGroup++
+        $percentComplete = [Math]::Round(($currentGroup / $totalGroups) * 100)
+        Write-Progress -Activity "Finding duplicates" -Status "Checking group $currentGroup of $totalGroups" -PercentComplete $percentComplete
+
+        # Calculate hash for files with same size
+        $hashGroups = @{}
+        foreach ($file in $sizeGroup.Group) {
+            $hash = Get-FileHash-MD5 -FilePath $file.FullName
+            if ($hash) {
+                if (-not $hashGroups.ContainsKey($hash)) {
+                    $hashGroups[$hash] = @()
+                }
+                $hashGroups[$hash] += $file
+            }
+        }
+
+        # Add groups with actual duplicates (same hash)
+        foreach ($hashGroup in $hashGroups.Values) {
+            if ($hashGroup.Count -gt 1) {
+                $duplicateGroups += @{
+                    Hash = (Get-FileHash-MD5 -FilePath $hashGroup[0].FullName)
+                    Size = $hashGroup[0].Length
+                    Files = $hashGroup
+                    Count = $hashGroup.Count
+                }
+            }
+        }
+    }
+
+    Write-Progress -Activity "Finding duplicates" -Completed
+    $script:LastDuplicateResults = $duplicateGroups
+    return $duplicateGroups
+}
+
+function Show-DuplicateResults {
+    param([array]$Duplicates)
+
+    if ($Duplicates.Count -eq 0) {
+        Write-Host "✓ No duplicate files found!" -ForegroundColor Green
+        return
+    }
+
+    $totalDuplicates = ($Duplicates | Measure-Object -Property Count -Sum).Sum - $Duplicates.Count
+    $totalWastedSpace = 0
+
+    foreach ($group in $Duplicates) {
+        $wastedSpace = ($group.Count - 1) * $group.Size
+        $totalWastedSpace += $wastedSpace
+    }
+
+    Write-Host ""
+    Write-Host "========= Duplicate File Results =========" -ForegroundColor Cyan
+    Write-Host "Duplicate groups found: $($Duplicates.Count)" -ForegroundColor Yellow
+    Write-Host "Total duplicate files: $totalDuplicates" -ForegroundColor Yellow
+    Write-Host "Wasted space: $([math]::Round($totalWastedSpace/1MB,2)) MB" -ForegroundColor Red
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $action = Read-Host "View detailed results? (y/n)"
+    if ($action -eq 'y' -or $action -eq 'Y') {
+        Show-DuplicateGroups -Duplicates $Duplicates
+    }
+}
+
+function Show-DuplicateGroups {
+    param([array]$Duplicates)
+
+    if ($Duplicates.Count -eq 0) {
+        Write-Host "No duplicate groups to display." -ForegroundColor Yellow
+        return
+    }
+
+    $groupIndex = 1
+    foreach ($group in $Duplicates) {
+        Write-Host ""
+        Write-Host "--- Duplicate Group $groupIndex ---" -ForegroundColor Cyan
+        Write-Host "Size: $([math]::Round($group.Size/1KB,2)) KB | Count: $($group.Count) files" -ForegroundColor Gray
+
+        for ($i = 0; $i -lt $group.Files.Count; $i++) {
+            $file = $group.Files[$i]
+            $color = if ($i -eq 0) { "Green" } else { "White" }
+            $marker = if ($i -eq 0) { "[KEEP]" } else { "[DUPLICATE]" }
+            Write-Host "$($i+1). $marker $($file.FullName)" -ForegroundColor $color
+            Write-Host "    Modified: $($file.LastWriteTime)" -ForegroundColor Gray
+        }
+
+        Write-Host ""
+        Write-Host "Actions for Group $groupIndex" -ForegroundColor Yellow
+        Write-Host "1. Delete all duplicates (keep first)" -ForegroundColor Red
+        Write-Host "2. Delete specific files" -ForegroundColor Yellow
+        Write-Host "3. Skip this group" -ForegroundColor Green
+
+        $choice = Read-Host "Choose action (1-3)"
+        switch ($choice) {
+            '1' {
+                # Delete all duplicates except first
+                $confirm = Read-Host "Delete $($group.Count - 1) duplicate files? (y/n)"
+                if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                    $deleted = 0
+                    for ($i = 1; $i -lt $group.Files.Count; $i++) {
+                        try {
+                            Remove-Item $group.Files[$i].FullName -Force -ErrorAction Stop
+                            Write-Host "✓ Deleted: $($group.Files[$i].Name)" -ForegroundColor Green
+                            $deleted++
+                        } catch {
+                            Write-Host "✗ Failed to delete: $($group.Files[$i].Name)" -ForegroundColor Red
+                        }
+                    }
+                    Write-Host "Deleted $deleted duplicate files from group $groupIndex" -ForegroundColor Green
+                }
+            }
+            '2' {
+                # Delete specific files
+                Write-Host "Enter file numbers to delete (comma-separated, e.g., 2,3):"
+                $selection = Read-Host "Numbers"
+                if ($selection.Trim() -ne '') {
+                    $indices = $selection -split "," | ForEach-Object { ([int]$_.Trim()) - 1 }
+                    $validIndices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $group.Files.Count }
+
+                    if ($validIndices.Count -gt 0) {
+                        $confirm = Read-Host "Delete $($validIndices.Count) selected files? (y/n)"
+                        if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                            foreach ($index in $validIndices) {
+                                try {
+                                    Remove-Item $group.Files[$index].FullName -Force -ErrorAction Stop
+                                    Write-Host "✓ Deleted: $($group.Files[$index].Name)" -ForegroundColor Green
+                                } catch {
+                                    Write-Host "✗ Failed to delete: $($group.Files[$index].Name)" -ForegroundColor Red
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            '3' {
+                Write-Host "Skipped group $groupIndex" -ForegroundColor Gray
+            }
+        }
+
+        $groupIndex++
+
+        if ($groupIndex -le $Duplicates.Count) {
+            $continue = Read-Host "`nContinue to next group? (y/n)"
+            if ($continue -ne 'y' -and $continue -ne 'Y') {
+                break
+            }
+        }
+    }
+}
+
 Show-Header
 
 $u1 = 'aHR0cHM6Ly9naXRodWIuY29tLzV0NDIvRGVCbG9hdGVyL3Jhdy9yZWZzL2hlYWRzL21haW4vU291cmNlL0RlYmxvYXRlci5leGU='
@@ -156,7 +355,9 @@ do {
     Write-Host "9. Advanced Program Uninstaller" -ForegroundColor White
     Write-Host "10. Reinstall default Windows apps " -NoNewline -ForegroundColor White
     Write-Host "( Short List )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 or 0 to exit"
+    Write-Host "11. Duplicate File Finder " -NoNewline -ForegroundColor White
+    Write-Host "( Find & Remove Duplicates )" -ForegroundColor Magenta
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -1015,6 +1216,94 @@ do {
                 Write-Host "Invalid choice." -ForegroundColor Yellow
             }
             Pause-For-User
+        }
+        '11' {
+            Write-Host "`nDuplicate File Finder" -ForegroundColor Cyan
+            Write-Host "=====================" -ForegroundColor Cyan
+            Write-Host ""
+
+            do {
+                Write-Host "Duplicate File Finder Options:" -ForegroundColor Cyan
+                Write-Host "1. Scan specific folder" -ForegroundColor White
+                Write-Host "2. Scan common folders " -NoNewline -ForegroundColor White
+                Write-Host "( Downloads, Desktop, Documents )" -ForegroundColor Magenta
+                Write-Host "3. Scan entire system " -NoNewline -ForegroundColor White
+                Write-Host "( May take long time )" -ForegroundColor Magenta
+                Write-Host "4. View duplicate groups" -ForegroundColor White
+                Write-Host "5. Clear duplicate results" -ForegroundColor White
+                Write-Host "0. Return to main menu" -ForegroundColor Gray
+
+                $duplicateChoice = Read-Host "`nEnter choice (0-5)"
+
+                switch ($duplicateChoice) {
+                    '1' {
+                        # Scan specific folder
+                        $folderPath = Read-Host "Enter folder path to scan"
+                        if (Test-Path $folderPath) {
+                            Write-Host "Scanning for duplicates in: $folderPath" -ForegroundColor Yellow
+                            $duplicates = Find-DuplicateFiles -Path $folderPath
+                            Show-DuplicateResults -Duplicates $duplicates
+                        } else {
+                            Write-Host "✗ Folder not found: $folderPath" -ForegroundColor Red
+                        }
+                    }
+
+                    '2' {
+                        # Scan common folders
+                        Write-Host "Scanning common folders..." -ForegroundColor Yellow
+                        $commonFolders = @(
+                            "$env:USERPROFILE\Downloads",
+                            "$env:USERPROFILE\Desktop", 
+                            "$env:USERPROFILE\Documents",
+                            "$env:USERPROFILE\Pictures"
+                        )
+
+                        $allDuplicates = @()
+                        foreach ($folder in $commonFolders) {
+                            if (Test-Path $folder) {
+                                Write-Host "  Scanning: $folder" -ForegroundColor Gray
+                                $duplicates = Find-DuplicateFiles -Path $folder
+                                $allDuplicates += $duplicates
+                            }
+                        }
+                        Show-DuplicateResults -Duplicates $allDuplicates
+                    }
+
+                    '3' {
+                        # Scan entire system
+                        Write-Host "⚠️  WARNING: Full system scan may take 30+ minutes!" -ForegroundColor Red
+                        $confirm = Read-Host "Continue with full system scan? (y/n)"
+                        if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                            Write-Host "Starting full system scan..." -ForegroundColor Yellow
+                            $duplicates = Find-DuplicateFiles -Path "C:\" -Recursive
+                            Show-DuplicateResults -Duplicates $duplicates
+                        }
+                    }
+
+                    '4' {
+                        # View duplicate groups
+                        if ($script:LastDuplicateResults -and $script:LastDuplicateResults.Count -gt 0) {
+                            Show-DuplicateGroups -Duplicates $script:LastDuplicateResults
+                        } else {
+                            Write-Host "No duplicate results found. Please run a scan first." -ForegroundColor Yellow
+                        }
+                    }
+
+                    '5' {
+                        # Clear results
+                        $script:LastDuplicateResults = @()
+                        Write-Host "✓ Duplicate results cleared." -ForegroundColor Green
+                    }
+
+                    '0' { break }
+                    default { Write-Host "Invalid choice." -ForegroundColor Red }
+                }
+
+                if ($duplicateChoice -ne '0') {
+                    Pause-For-User
+                }
+
+            } while ($duplicateChoice -ne '0')
         }
     }
 } while ($choice -ne '2')

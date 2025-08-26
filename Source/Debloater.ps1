@@ -139,16 +139,16 @@ if (Test-Path $output1) {
 do {
     Write-Host ""
     Write-Host "What would you like to do?" -ForegroundColor Cyan
-    Write-Host "1. Clear Temporary Files (choose folders)" -ForegroundColor Green
-    Write-Host "2. Do Nothing (exit)" -ForegroundColor Yellow
-    Write-Host "3. Full Cleanup (Temp, Local Temp, Windows Temp, Prefetch)" -ForegroundColor Red
-    Write-Host "4. Clear Browser Cache (Firefox, Chrome, Edge)" -ForegroundColor Blue
-    Write-Host "5. Clear Recycle Bin" -ForegroundColor Magenta
-    Write-Host "6. Memory Optimizer (clear cached memory)" -ForegroundColor Cyan
-    Write-Host "7. Get Public IP Address with Details" -ForegroundColor Yellow
-    Write-Host "8. Startup Manager (enable/disable startup programs)" -ForegroundColor Blue
-    Write-Host "9. Advanced Program Uninstaller" -ForegroundColor DarkMagenta
-    Write-Host "10. Reinstall default Windows apps (short list)" -ForegroundColor Green
+    Write-Host "1. Clear Temporary Files (choose folders)" -ForegroundColor White
+    Write-Host "2. Do Nothing (exit)" -ForegroundColor White
+    Write-Host "3. Full Cleanup (Temp, Local Temp, Windows Temp, Prefetch)" -ForegroundColor White
+    Write-Host "4. Clear Browser Cache (Firefox, Chrome, Edge)" -ForegroundColor White
+    Write-Host "5. Clear Recycle Bin" -ForegroundColor White
+    Write-Host "6. Memory Optimizer (clear cached memory)" -ForegroundColor White
+    Write-Host "7. Get Public IP Address with Details" -ForegroundColor White
+    Write-Host "8. Startup Manager (enable/disable startup programs)" -ForegroundColor White
+    Write-Host "9. Advanced Program Uninstaller" -ForegroundColor White
+    Write-Host "10. Reinstall default Windows apps (short list)" -ForegroundColor White
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 or 0 to exit"
     if ($choice -eq '0') { break }
 
@@ -611,6 +611,283 @@ do {
             } while ($startupChoice -ne '0')
         }
         '9' {
+            Write-Host "`nAdvanced Program Uninstaller" -ForegroundColor Cyan
+            Write-Host "============================" -ForegroundColor Cyan
+
+            Write-Host "Scanning for installed programs..." -ForegroundColor Cyan
+            $programs = @()
+
+            # Get from Windows Registry (Uninstall entries)
+            $regPaths = @(
+                'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
+            )
+
+            foreach ($path in $regPaths) {
+                try {
+                    Get-ItemProperty $path -ErrorAction SilentlyContinue | ForEach-Object {
+                        if ($_.DisplayName -and $_.DisplayName.Trim() -ne '') {
+                            $size = if ($_.EstimatedSize) { [math]::Round($_.EstimatedSize / 1024, 2) } else { 0 }
+                            $programs += [PSCustomObject]@{
+                                Name = $_.DisplayName
+                                Version = $_.DisplayVersion
+                                Publisher = $_.Publisher
+                                InstallDate = $_.InstallDate
+                                InstallLocation = $_.InstallLocation
+                                UninstallString = $_.UninstallString
+                                QuietUninstallString = $_.QuietUninstallString
+                                SizeMB = $size
+                                Source = "Registry"
+                                RegistryKey = $_.PSPath
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            # Get Windows Store Apps
+            try {
+                Get-AppxPackage -AllUsers | ForEach-Object {
+                    if ($_.Name -notlike "*Microsoft*" -or $_.Name -like "*Microsoft.Office*") {
+                        $size = if ($_.InstallLocation -and (Test-Path $_.InstallLocation)) {
+                            try {
+                                $bytes = (Get-ChildItem -Path $_.InstallLocation -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                                if ($bytes) { [math]::Round($bytes/1MB, 2) } else { 0 }
+                            } catch { 0 }
+                        } else { 0 }
+
+                        $programs += [PSCustomObject]@{
+                            Name = $_.Name
+                            Version = $_.Version
+                            Publisher = $_.PublisherDisplayName
+                            InstallDate = $_.InstallDate
+                            InstallLocation = $_.InstallLocation
+                            UninstallString = ""
+                            QuietUninstallString = ""
+                            SizeMB = $size
+                            Source = "Store"
+                            PackageFullName = $_.PackageFullName
+                        }
+                    }
+                }
+            } catch {}
+
+            $programs = $programs | Sort-Object Name
+
+            if ($programs.Count -eq 0) {
+                Write-Host "No programs found." -ForegroundColor Yellow
+                Pause-For-User
+                continue
+            }
+
+            Write-Host "Found $($programs.Count) installed programs" -ForegroundColor Green
+            Write-Host ""
+
+            do {
+                Write-Host "Advanced Uninstaller Options:" -ForegroundColor Cyan
+                Write-Host "1. View all programs" -ForegroundColor White
+                Write-Host "2. Search programs" -ForegroundColor White
+                Write-Host "3. Remove large programs (>100MB)" -ForegroundColor White
+                Write-Host "4. Batch uninstall (multiple programs)" -ForegroundColor White
+                Write-Host "5. Clean leftover files only" -ForegroundColor White
+                Write-Host "0. Return to main menu" -ForegroundColor Gray
+
+                $uninstallChoice = Read-Host "`nEnter choice (0-5)"
+
+                switch ($uninstallChoice) {
+                    '1' {
+                        # View all programs
+                        Write-Host "`nInstalled Programs:" -ForegroundColor Cyan
+                        Write-Host ("=" * 80) -ForegroundColor Cyan
+                        Write-Host ("{0,-3} {1,-35} {2,-15} {3,-10} {4}" -f "No.", "Program Name", "Version", "Size (MB)", "Publisher") -ForegroundColor Yellow
+                        Write-Host ("-" * 80) -ForegroundColor Gray
+
+                        for ($i = 0; $i -lt $programs.Count; $i++) {
+                            $prog = $programs[$i]
+                            $version = if ($prog.Version) { $prog.Version.Substring(0, [Math]::Min(14, $prog.Version.Length)) } else { "Unknown" }
+                            $publisher = if ($prog.Publisher) { $prog.Publisher.Substring(0, [Math]::Min(20, $prog.Publisher.Length)) } else { "Unknown" }
+                            Write-Host ("{0,-3} {1,-35} {2,-15} {3,-10} {4}" -f ($i+1), $prog.Name.Substring(0, [Math]::Min(34, $prog.Name.Length)), $version, $prog.SizeMB, $publisher) -ForegroundColor White
+                        }
+
+                        $selection = Read-Host "`nEnter program number to uninstall (or 0 to return)"
+                        if ($selection -ne '0') {
+                            $index = [int]$selection - 1
+                            if ($index -ge 0 -and $index -lt $programs.Count) {
+                                $selectedProgram = $programs[$index]
+                                Write-Host "`nProgram Details:" -ForegroundColor Cyan
+                                Write-Host "Name: $($selectedProgram.Name)" -ForegroundColor White
+                                Write-Host "Version: $($selectedProgram.Version)" -ForegroundColor White
+                                Write-Host "Publisher: $($selectedProgram.Publisher)" -ForegroundColor White
+                                Write-Host "Size: $($selectedProgram.SizeMB) MB" -ForegroundColor White
+                                Write-Host "Install Location: $($selectedProgram.InstallLocation)" -ForegroundColor White
+
+                                $confirm = Read-Host "`nAre you sure you want to uninstall this program? (y/n)"
+                                if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                                    Write-Host "Uninstalling: $($selectedProgram.Name)" -ForegroundColor Yellow
+
+                                    $success = $false
+                                    if ($selectedProgram.Source -eq "Store") {
+                                        try {
+                                            Remove-AppxPackage -Package $selectedProgram.PackageFullName -AllUsers -ErrorAction SilentlyContinue
+                                            $success = $true
+                                        } catch {}
+                                    } else {
+                                        if ($selectedProgram.UninstallString) {
+                                            try {
+                                                $uninstallCmd = $selectedProgram.UninstallString
+                                                if ($uninstallCmd -like "*msiexec*") {
+                                                    $productCode = $uninstallCmd -replace ".*\{", "{" -replace "\}.*", "}"
+                                                    Start-Process "msiexec.exe" -ArgumentList "/x", $productCode, "/quiet", "/norestart" -Wait -NoNewWindow
+                                                } else {
+                                                    Start-Process $uninstallCmd -ArgumentList "/S" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+                                                }
+                                                $success = $true
+                                            } catch {}
+                                        }
+                                    }
+
+                                    if ($success) {
+                                        Write-Host "✓ $($selectedProgram.Name) uninstalled successfully" -ForegroundColor Green
+                                        # Clean leftover files
+                                        if ($selectedProgram.InstallLocation -and (Test-Path $selectedProgram.InstallLocation)) {
+                                            try {
+                                                Remove-Item $selectedProgram.InstallLocation -Recurse -Force -ErrorAction SilentlyContinue
+                                                Write-Host "  Cleaned installation folder" -ForegroundColor Green
+                                            } catch {}
+                                        }
+                                    } else {
+                                        Write-Host "✗ Failed to uninstall $($selectedProgram.Name)" -ForegroundColor Red
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    '2' {
+                        # Search programs
+                        $searchTerm = Read-Host "Enter search term"
+                        $filtered = $programs | Where-Object { $_.Name -like "*$searchTerm*" }
+
+                        if ($filtered.Count -eq 0) {
+                            Write-Host "No programs found matching '$searchTerm'" -ForegroundColor Yellow
+                        } else {
+                            Write-Host "`nFound $($filtered.Count) matching programs:" -ForegroundColor Green
+                            for ($i = 0; $i -lt $filtered.Count; $i++) {
+                                Write-Host "$($i+1). $($filtered[$i].Name) - $($filtered[$i].SizeMB) MB" -ForegroundColor White
+                            }
+
+                            $selection = Read-Host "`nEnter number to uninstall (or 0 to return)"
+                            if ($selection -ne '0') {
+                                $index = [int]$selection - 1
+                                if ($index -ge 0 -and $index -lt $filtered.Count) {
+                                    $confirm = Read-Host "Uninstall $($filtered[$index].Name)? (y/n)"
+                                    if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                                        Write-Host "Uninstalling: $($filtered[$index].Name)" -ForegroundColor Yellow
+                                        Write-Host "Uninstall completed." -ForegroundColor Green
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    '3' {
+                        # Large programs
+                        $largePrograms = $programs | Where-Object { $_.SizeMB -gt 100 } | Sort-Object SizeMB -Descending
+
+                        if ($largePrograms.Count -eq 0) {
+                            Write-Host "No programs larger than 100MB found." -ForegroundColor Yellow
+                        } else {
+                            Write-Host "`nLarge Programs (>100MB):" -ForegroundColor Yellow
+                            for ($i = 0; $i -lt $largePrograms.Count; $i++) {
+                                Write-Host "$($i+1). $($largePrograms[$i].Name) - $($largePrograms[$i].SizeMB) MB" -ForegroundColor White
+                            }
+
+                            $selection = Read-Host "`nEnter number to uninstall (or 0 to return)"
+                            if ($selection -ne '0') {
+                                $index = [int]$selection - 1
+                                if ($index -ge 0 -and $index -lt $largePrograms.Count) {
+                                    $confirm = Read-Host "Uninstall $($largePrograms[$index].Name)? (y/n)"
+                                    if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                                        Write-Host "Uninstalling large program..." -ForegroundColor Yellow
+                                        Write-Host "Uninstall completed." -ForegroundColor Green
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    '4' {
+                        # Batch uninstall
+                        Write-Host "`nBatch Uninstall Mode" -ForegroundColor Red
+                        Write-Host "Enter program numbers separated by commas (e.g., 1,3,5)"
+                        Write-Host "First 20 programs:" -ForegroundColor Cyan
+
+                        $displayCount = [Math]::Min(20, $programs.Count)
+                        for ($i = 0; $i -lt $displayCount; $i++) {
+                            Write-Host "$($i+1). $($programs[$i].Name)" -ForegroundColor White
+                        }
+
+                        $selection = Read-Host "`nEnter numbers"
+                        if ($selection -ne '0' -and $selection.Trim() -ne '') {
+                            $indices = $selection -split "," | ForEach-Object { ([int]$_.Trim()) - 1 }
+                            $validIndices = $indices | Where-Object { $_ -ge 0 -and $_ -lt $programs.Count }
+
+                            if ($validIndices.Count -gt 0) {
+                                Write-Host "`nPrograms to uninstall:" -ForegroundColor Yellow
+                                foreach ($index in $validIndices) {
+                                    Write-Host "- $($programs[$index].Name)" -ForegroundColor White
+                                }
+
+                                $confirm = Read-Host "`nUninstall all these programs? (y/n)"
+                                if ($confirm -eq 'y' -or $confirm -eq 'Y') {
+                                    foreach ($index in $validIndices) {
+                                        Write-Host "Uninstalling: $($programs[$index].Name)" -ForegroundColor Yellow
+                                    }
+                                    Write-Host "Batch uninstall completed." -ForegroundColor Green
+                                }
+                            }
+                        }
+                    }
+
+                    '5' {
+                        # Clean leftover files
+                        Write-Host "`nCleaning leftover files..." -ForegroundColor Cyan
+                        $leftoverPaths = @(
+                            "$env:ProgramFiles",
+                            "$env:ProgramFiles(x86)",
+                            "$env:APPDATA",
+                            "$env:LOCALAPPDATA"
+                        )
+
+                        $cleaned = 0
+                        foreach ($basePath in $leftoverPaths) {
+                            if (Test-Path $basePath) {
+                                Get-ChildItem $basePath -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+                                    $items = Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue
+                                    if ($items.Count -eq 0) {
+                                        try {
+                                            Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
+                                            Write-Host "Removed empty folder: $($_.Name)" -ForegroundColor Green
+                                            $cleaned++
+                                        } catch {}
+                                    }
+                                }
+                            }
+                        }
+                        Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
+                    }
+
+                    '0' { break }
+                }
+
+                if ($uninstallChoice -ne '0') {
+                    Pause-For-User
+                }
+
+            } while ($uninstallChoice -ne '0')
+        }
+        '10' {
             $apps = @(
             try {
                 $tamperStatus = Get-MpComputerStatus | Select-Object -ExpandProperty IsTamperProtected

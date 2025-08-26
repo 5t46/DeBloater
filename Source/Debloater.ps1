@@ -81,8 +81,8 @@ do {
     Write-Host "7. Get Public IP Address with Details" -ForegroundColor Yellow
     Write-Host "8. Startup Manager (enable/disable startup programs)" -ForegroundColor Blue
     Write-Host "9. Reinstall default Windows apps (short list)" -ForegroundColor Green
-    Write-Host "10. Enable/Disable Windows Defender via Registry Editor" -ForegroundColor Yellow
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9 or 10"
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9 or 0 to exit"
+    if ($choice -eq '0') { break }
 
     switch ($choice) {
         

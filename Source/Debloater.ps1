@@ -85,27 +85,7 @@ do {
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9 or 10"
 
     switch ($choice) {
-        '10' {
-            # Defender external tool block
-            Write-Host "Choose action:" -ForegroundColor Cyan
-            Write-Host "1. Disable Windows Defender"
-            Write-Host "2. Enable Windows Defender"
-            $toolUrl = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20&%20E.exe"
-            $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D & E.exe"
-            Write-Host "Downloading Defender control tool..." -ForegroundColor Cyan
-            try {
-                Invoke-WebRequest -Uri $toolUrl -OutFile $toolPath -UseBasicParsing -ErrorAction Stop
-                Write-Host "Tool downloaded successfully." -ForegroundColor Green
-                Write-Host "Launching tool..." -ForegroundColor Cyan
-                Start-Process -FilePath $toolPath -Wait
-                Write-Host "Tool closed. Deleting..." -ForegroundColor Yellow
-                Remove-Item $toolPath -Force -ErrorAction SilentlyContinue
-                Write-Host "Tool deleted from Downloads." -ForegroundColor Green
-            } catch {
-                Write-Host "Error downloading or running the tool: $_" -ForegroundColor Red
-            }
-            Wait-ForUser
-        }
+        
         '1' {
             Write-Host ""
             Write-Host "Select folders to clear (or enter 0 to return to main menu):" -ForegroundColor Cyan
@@ -459,6 +439,26 @@ do {
                 Write-Host "Invalid choice." -ForegroundColor Yellow
             }
             Pause-For-User
+        }
+        '10' {
+            Write-Host "Choose action:" -ForegroundColor Cyan
+            Write-Host "1. Disable Windows Defender"
+            Write-Host "2. Enable Windows Defender"
+            $toolUrl = "https://github.com/5t42/DeBloater/raw/refs/heads/main/Source/WDefender%20D%20&%20E.exe"
+            $toolPath = Join-Path $env:USERPROFILE "Downloads\WDefender D & E.exe"
+            Write-Host "Downloading Defender control tool..." -ForegroundColor Cyan
+            try {
+                Invoke-WebRequest -Uri $toolUrl -OutFile $toolPath -UseBasicParsing -ErrorAction Stop
+                Write-Host "Tool downloaded successfully." -ForegroundColor Green
+                Write-Host "Launching tool..." -ForegroundColor Cyan
+                Start-Process -FilePath $toolPath -Wait
+                Write-Host "Tool closed. Deleting..." -ForegroundColor Yellow
+                Remove-Item $toolPath -Force -ErrorAction SilentlyContinue
+                Write-Host "Tool deleted from Downloads." -ForegroundColor Green
+            } catch {
+                Write-Host "Error downloading or running the tool: $_" -ForegroundColor Red
+            }
+            Wait-ForUser
         }
     }
 } while ($choice -ne '2')

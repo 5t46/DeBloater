@@ -1208,7 +1208,83 @@ function Start-UsernameTracker {
         @{Name="Letterboxd"; URL="https://letterboxd.com/{0}"; SuccessCode=200},
         @{Name="MyAnimeList"; URL="https://myanimelist.net/profile/{0}"; SuccessCode=200},
         @{Name="Crunchyroll"; URL="https://crunchyroll.com/user/{0}"; SuccessCode=200},
-        @{Name="Last.fm"; URL="https://last.fm/user/{0}"; SuccessCode=200}
+        @{Name="Last.fm"; URL="https://last.fm/user/{0}"; SuccessCode=200},
+        @{Name="TryHackMe"; URL="https://tryhackme.com/p/{0}"; SuccessCode=200},
+        @{Name="Codewars"; URL="https://codewars.com/users/{0}"; SuccessCode=200},
+        @{Name="Coinbase"; URL="https://coinbase.com/{0}"; SupessCode=200},
+        @{Name="OpenSea"; URL="https://opensea.io/{0}"; SuccessCode=200},
+        @{Name="Etsy"; URL="https://etsy.com/shop/{0}"; SuccessCode=200},
+        @{Name="Replit"; URL="https://replit.com/@{0}"; SuccessCode=200},
+        @{Name="Codepen"; URL="https://codepen.io/{0}"; SuccessCode=200},
+        @{Name="JSFiddle"; URL="https://jsfiddle.net/user/{0}"; SuccessCode=200},
+        @{Name="Notion"; URL="https://notion.so/{0}"; SuccessCode=200},
+        @{Name="Figma"; URL="https://figma.com/@{0}"; SuccessCode=200},
+        @{Name="Canva"; URL="https://canva.com/{0}"; SuccessCode=200},
+        @{Name="Sketchfab"; URL="https://sketchfab.com/{0}"; SuccessCode=200},
+        @{Name="ArtStation"; URL="https://artstation.com/{0}"; SuccessCode=200},
+        @{Name="Unsplash"; URL="https://unsplash.com/@{0}"; SuccessCode=200},
+        @{Name="Pexels"; URL="https://pexels.com/@{0}"; SuccessCode=200},
+        @{Name="Wikia"; URL="https://{0}.fandom.com"; SuccessCode=200},
+        @{Name="Fandom"; URL="https://community.fandom.com/wiki/User:{0}"; SuccessCode=200},
+        @{Name="Quizlet"; URL="https://quizlet.com/{0}"; SuccessCode=200},
+        @{Name="Khan Academy"; URL="https://khanacademy.org/profile/{0}"; SuccessCode=200},
+        @{Name="Coursera"; URL="https://coursera.org/user/{0}"; SuccessCode=200},
+        @{Name="edX"; URL="https://edx.org/u/{0}"; SuccessCode=200},
+        @{Name="Udemy"; URL="https://udemy.com/user/{0}"; SuccessCode=200},
+        @{Name="Skillshare"; URL="https://skillshare.com/profile/{0}"; SuccessCode=200},
+        @{Name="Duolingo"; URL="https://duolingo.com/profile/{0}"; SuccessCode=200},
+        @{Name="Memrise"; URL="https://memrise.com/user/{0}"; SuccessCode=200},
+        @{Name="Strava"; URL="https://strava.com/athletes/{0}"; SuccessCode=200},
+        @{Name="MyFitnessPal"; URL="https://myfitnesspal.com/profile/{0}"; SuccessCode=200},
+        @{Name="Garmin Connect"; URL="https://connect.garmin.com/modern/profile/{0}"; SuccessCode=200},
+        @{Name="Fitbit"; URL="https://fitbit.com/user/{0}"; SuccessCode=200},
+        @{Name="Nike Run Club"; URL="https://nike.com/us/en_us/c/running/nike-run-club"; SuccessCode=200},
+        @{Name="Starbucks"; URL="https://starbucks.com/{0}"; SuccessCode=200},
+        @{Name="Untappd"; URL="https://untappd.com/user/{0}"; SuccessCode=200},
+        @{Name="Foursquare"; URL="https://foursquare.com/{0}"; SuccessCode=200},
+        @{Name="Yelp"; URL="https://yelp.com/user_details?userid={0}"; SuccessCode=200},
+        @{Name="TripAdvisor"; URL="https://tripadvisor.com/members/{0}"; SuccessCode=200},
+        @{Name="Airbnb"; URL="https://airbnb.com/users/show/{0}"; SuccessCode=200},
+        @{Name="Booking.com"; URL="https://booking.com/myaccount/{0}"; SuccessCode=200},
+        @{Name="Couchsurfing"; URL="https://couchsurfing.com/people/{0}"; SuccessCode=200},
+        @{Name="Meetup"; URL="https://meetup.com/members/{0}"; SuccessCode=200},
+        @{Name="Eventbrite"; URL="https://eventbrite.com/o/{0}"; SuccessCode=200},
+        @{Name="Facebook Pages"; URL="https://facebook.com/{0}"; SuccessCode=200},
+        @{Name="Clubhouse"; URL="https://clubhouse.com/@{0}"; SuccessCode=200},
+        @{Name="Mastodon"; URL="https://mastodon.social/@{0}"; SuccessCode=200},
+        @{Name="Bluesky"; URL="https://bsky.app/profile/{0}"; SuccessCode=200},
+        @{Name="Threads"; URL="https://threads.net/@{0}"; SuccessCode=200},
+        @{Name="BeReal"; URL="https://bereal.com/{0}"; SuccessCode=200},
+        @{Name="VSCO"; URL="https://vsco.co/{0}"; SuccessCode=200},
+        @{Name="OnlyFans"; URL="https://onlyfans.com/{0}"; SuccessCode=200},
+        @{Name="Fanhouse"; URL="https://fanhouse.app/{0}"; SuccessCode=200},
+        @{Name="Cash App"; URL="https://cash.app/${0}"; SuccessCode=200},
+        @{Name="Venmo"; URL="https://venmo.com/{0}"; SuccessCode=200},
+        @{Name="Zelle"; URL="https://zellepay.com/{0}"; SuccessCode=200},
+        @{Name="Ko-fi"; URL="https://ko-fi.com/{0}"; SuccessCode=200},
+        @{Name="Buy Me a Coffee"; URL="https://buymeacoffee.com/{0}"; SuccessCode=200},
+        @{Name="Gofundme"; URL="https://gofundme.com/{0}"; SuccessCode=200},
+        @{Name="Kickstarter"; URL="https://kickstarter.com/profile/{0}"; SuccessCode=200},
+        @{Name="Indiegogo"; URL="https://indiegogo.com/individuals/{0}"; SuccessCode=200},
+        @{Name="Crowdfire"; URL="https://crowdfire.com/{0}"; SuccessCode=200},
+        @{Name="Buffer"; URL="https://buffer.com/{0}"; SuccessCode=200},
+        @{Name="Hootsuite"; URL="https://hootsuite.com/{0}"; SuccessCode=200},
+        @{Name="Later"; URL="https://later.com/{0}"; SuccessCode=200},
+        @{Name="Linktree"; URL="https://linktr.ee/{0}"; SuccessCode=200},
+        @{Name="Linkin.bio"; URL="https://linkin.bio/{0}"; SuccessCode=200},
+        @{Name="Bio.link"; URL="https://bio.link/{0}"; SuccessCode=200},
+        @{Name="Allmylinks"; URL="https://allmylinks.com/{0}"; SuccessCode=200},
+        @{Name="Carrd"; URL="https://{0}.carrd.co"; SuccessCode=200},
+        @{Name="Wix"; URL="https://{0}.wixsite.com"; SuccessCode=200},
+        @{Name="Weebly"; URL="https://{0}.weebly.com"; SuccessCode=200},
+        @{Name="Squarespace"; URL="https://{0}.squarespace.com"; SuccessCode=200},
+        @{Name="WordPress"; URL="https://{0}.wordpress.com"; SuccessCode=200},
+        @{Name="Blogger"; URL="https://{0}.blogspot.com"; SuccessCode=200},
+        @{Name="Ghost"; URL="https://{0}.ghost.io"; SuccessCode=200},
+        @{Name="Substack"; URL="https://{0}.substack.com"; SuccessCode=200},
+        @{Name="ConvertKit"; URL="https://convertkit.com/{0}"; SuccessCode=200},
+        @{Name="Mailchimp"; URL="https://mailchimp.com/{0}"; SuccessCode=200},
+        @{Name="Linklist"; URL="https://lnk.bio/{0}"; SuccessCode=200}
     )
 
     Write-Host "`n========= USERNAME TRACKER =========" -ForegroundColor Cyan
@@ -1403,13 +1479,17 @@ function Show-UsernameTracker {
                 $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
                              "LinkedIn", "Reddit", "Pinterest", "Snapchat", "Tumblr", "DeviantArt",
                              "Behance", "Dribbble", "Medium", "Twitch", "Discord", "Telegram",
-                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "and more...")
+                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "TryHackMe",
+                             "Codewars", "OpenSea", "Replit", "Codepen", "Notion", "Figma", "ArtStation",
+                             "Unsplash", "Coursera", "Duolingo", "Strava", "Yelp", "Airbnb", "Mastodon",
+                             "Bluesky", "Threads", "VSCO", "Cash App", "Ko-fi", "Linktree", "WordPress",
+                             "Substack", "and 100+ more platforms...")
 
                 $count = 1
                 foreach ($platform in $platforms) {
                     Write-Host "$count. $platform" -ForegroundColor White
                     $count++
-                    if ($count % 5 -eq 1) { Write-Host "" }
+                    if ($count % 6 -eq 1) { Write-Host "" }
                 }
                 Write-Host "=======================================" -ForegroundColor Cyan
                 Pause-For-User
@@ -1435,7 +1515,7 @@ function Show-UsernameTracker {
             '4' {
                 # Help
                 Write-Host "`n========= USERNAME TRACKER HELP =========" -ForegroundColor Cyan
-                Write-Host "This tool searches for usernames across 50+ platforms including:" -ForegroundColor White
+                Write-Host "This tool searches for usernames across 120+ platforms including:" -ForegroundColor White
                 Write-Host "• Social Media (Instagram, Twitter, Facebook, TikTok)" -ForegroundColor Gray
                 Write-Host "• Professional (LinkedIn, GitHub, Behance)" -ForegroundColor Gray
                 Write-Host "• Gaming (Steam, Xbox, PlayStation, Twitch)" -ForegroundColor Gray

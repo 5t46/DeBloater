@@ -1300,6 +1300,15 @@ function Start-UsernameTracker {
     $total = $platforms.Count
     $current = 0
 
+    # Random user agents for better stealth
+    $userAgents = @(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15"
+    )
+
     foreach ($platform in $platforms) {
         $current++
         $url = $platform.URL -f $Username
@@ -1307,51 +1316,114 @@ function Start-UsernameTracker {
 
         Write-Progress -Activity "Username Tracker" -Status "Checking $($platform.Name)" -PercentComplete $percentComplete
 
-        try {
-            # Create HTTP request with timeout
-            $request = [System.Net.WebRequest]::Create($url)
-            $request.Method = "HEAD"  # Use HEAD to reduce bandwidth
-            $request.Timeout = 5000   # 5 second timeout
-            $request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        $maxRetries = 2
+        $success = $false
+        $retryCount = 0
 
-            $response = $request.GetResponse()
-            $statusCode = [int]$response.StatusCode
-            $response.Close()
+        while (-not $success -and $retryCount -lt $maxRetries) {
+            try {
+                # Create HTTP request with better configuration
+                $request = [System.Net.WebRequest]::Create($url)
 
-            if ($statusCode -eq $platform.SuccessCode) {
-                $foundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Found"}
-                Write-Host "[+] " -NoNewline -ForegroundColor Green
-                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
-                Write-Host "Found" -ForegroundColor Green
-            } else {
-                $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
-                Write-Host "[-] " -NoNewline -ForegroundColor Red
-                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
-                Write-Host "Not Found" -ForegroundColor Red
+                # Use GET instead of HEAD for better compatibility
+                $request.Method = "GET"
+                $request.Timeout = 10000  # Increased to 10 seconds
+
+                # Random user agent selection
+                $randomUserAgent = $userAgents | Get-Random
+                $request.UserAgent = $randomUserAgent
+
+                # Add realistic headers
+                $request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                $request.Headers.Add("Accept-Language", "en-US,en;q=0.9,ar;q=0.8")
+                $request.Headers.Add("Accept-Encoding", "gzip, deflate, br")
+                $request.Headers.Add("Cache-Control", "no-cache")
+                $request.Headers.Add("Pragma", "no-cache")
+                $request.Headers.Add("Upgrade-Insecure-Requests", "1")
+
+                # Set realistic referer for some sites
+                if ($url -like "*instagram*" -or $url -like "*facebook*") {
+                    $request.Headers.Add("Referer", "https://www.google.com/")
+                }
+
+                $response = $request.GetResponse()
+                $statusCode = [int]$response.StatusCode
+                $response.Close()
+
+                if ($statusCode -eq 200 -or $statusCode -eq $platform.SuccessCode) {
+                    $foundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Found"}
+                    Write-Host "[+] " -NoNewline -ForegroundColor Green
+                    Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                    Write-Host "Found" -ForegroundColor Green
+                    $success = $true
+                } else {
+                    $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
+                    Write-Host "[-] " -NoNewline -ForegroundColor Red
+                    Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                    Write-Host "Not Found" -ForegroundColor Red
+                    $success = $true
+                }
+            }
+            catch [System.Net.WebException] {
+                $webException = $_.Exception
+                if ($webException.Response) {
+                    $statusCode = [int]$webException.Response.StatusCode
+                    if ($statusCode -eq 404) {
+                        $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
+                        Write-Host "[-] " -NoNewline -ForegroundColor Red
+                        Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                        Write-Host "Not Found" -ForegroundColor Red
+                        $success = $true
+                    } elseif ($statusCode -eq 403 -or $statusCode -eq 429) {
+                        # Rate limited or forbidden, try again
+                        $retryCount++
+                        if ($retryCount -lt $maxRetries) {
+                            Start-Sleep -Milliseconds (Get-Random -Minimum 1000 -Maximum 3000)
+                        } else {
+                            $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Blocked"}
+                            Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                            Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                            Write-Host "Blocked" -ForegroundColor Yellow
+                            $success = $true
+                        }
+                    } else {
+                        $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error ($statusCode)"}
+                        Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                        Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                        Write-Host "Error ($statusCode)" -ForegroundColor Yellow
+                        $success = $true
+                    }
+                } else {
+                    # Network error, retry
+                    $retryCount++
+                    if ($retryCount -lt $maxRetries) {
+                        Start-Sleep -Milliseconds (Get-Random -Minimum 500 -Maximum 1500)
+                    } else {
+                        $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Network Error"}
+                        Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                        Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                        Write-Host "Network Error" -ForegroundColor Yellow
+                        $success = $true
+                    }
+                }
+            }
+            catch {
+                $retryCount++
+                if ($retryCount -lt $maxRetries) {
+                    Start-Sleep -Milliseconds (Get-Random -Minimum 500 -Maximum 1500)
+                } else {
+                    $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error"}
+                    Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                    Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                    Write-Host "Error" -ForegroundColor Yellow
+                    $success = $true
+                }
             }
         }
-        catch [System.Net.WebException] {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            if ($statusCode -eq 404) {
-                $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
-                Write-Host "[-] " -NoNewline -ForegroundColor Red
-                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
-                Write-Host "Not Found" -ForegroundColor Red
-            } else {
-                $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error"}
-                Write-Host "[!] " -NoNewline -ForegroundColor Yellow
-                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
-                Write-Host "Error" -ForegroundColor Yellow
-            }
-        }
-        catch {
-            $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error"}
-            Write-Host "[!] " -NoNewline -ForegroundColor Yellow
-            Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
-            Write-Host "Error" -ForegroundColor Yellow
-        }
 
-        Start-Sleep -Milliseconds 100  # Small delay to be respectful
+        # Random delay between requests to avoid rate limiting
+        $randomDelay = Get-Random -Minimum 300 -Maximum 800
+        Start-Sleep -Milliseconds $randomDelay
     }
 
     Write-Progress -Activity "Username Tracker" -Completed
@@ -1528,12 +1600,19 @@ function Show-UsernameTracker {
                 Write-Host "[-] " -NoNewline -ForegroundColor Red  
                 Write-Host "Not Found - Profile doesn't exist" -ForegroundColor Red
                 Write-Host "[!] " -NoNewline -ForegroundColor Yellow
-                Write-Host "Error - Unable to check (timeout/blocked)" -ForegroundColor Yellow
+                Write-Host "Blocked/Error - Rate limited or protected site" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Improvements made:" -ForegroundColor White
+                Write-Host "• Random user agents to avoid detection" -ForegroundColor Gray
+                Write-Host "• Realistic browser headers added" -ForegroundColor Gray
+                Write-Host "• Automatic retry on rate limits" -ForegroundColor Gray
+                Write-Host "• Random delays between requests" -ForegroundColor Gray
+                Write-Host "• Better error categorization" -ForegroundColor Gray
                 Write-Host ""
                 Write-Host "Tips:" -ForegroundColor White
-                Write-Host "• Use common usernames without special characters" -ForegroundColor Gray
-                Write-Host "• Some platforms may block automated requests" -ForegroundColor Gray
-                Write-Host "• Results can be exported to a text file" -ForegroundColor Gray
+                Write-Host "• Use VPN for better success rates" -ForegroundColor Gray
+                Write-Host "• Run during off-peak hours" -ForegroundColor Gray
+                Write-Host "• Some big platforms will always block automation" -ForegroundColor Gray
                 Write-Host "==========================================" -ForegroundColor Cyan
                 Pause-For-User
             }

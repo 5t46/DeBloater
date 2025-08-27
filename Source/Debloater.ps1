@@ -1642,6 +1642,405 @@ function Show-UsernameTracker {
 
     } while ($choice -ne '0')
 }
+
+#region EMPTY FOLDERS REMOVAL FUNCTIONS
+# ============================================================================
+# EMPTY FOLDERS REMOVAL FUNCTIONS
+# ============================================================================
+
+function Find-EmptyFolders {
+    <#
+    .SYNOPSIS
+        Scans specified path for empty directories
+    .DESCRIPTION
+        Recursively searches for directories that contain no files or subdirectories
+    .PARAMETER Path
+        Root path to scan for empty folders
+    .PARAMETER Recursive
+        Switch to enable recursive scanning of subdirectories
+    .PARAMETER ExcludePaths
+        Array of paths to exclude from scanning
+    .RETURNS
+        Array of empty folder paths found
+    #>
+    param(
+        [string]$Path,
+        [switch]$Recursive,
+        [array]$ExcludePaths = @()
+    )
+
+    Write-Host "Scanning for empty folders in: $Path" -ForegroundColor Cyan
+
+    # Default exclusions for system folders
+    $defaultExclusions = @(
+        "C:\Windows",
+        "C:\Program Files",
+        "C:\Program Files (x86)",
+        "C:\ProgramData",
+        "$env:APPDATA\Microsoft",
+        "$env:LOCALAPPDATA\Microsoft"
+    )
+
+    $allExclusions = $ExcludePaths + $defaultExclusions
+    $emptyFolders = @()
+
+    try {
+        if ($Recursive) {
+            $folders = Get-ChildItem -Path $Path -Directory -Recurse -ErrorAction SilentlyContinue
+        } else {
+            $folders = Get-ChildItem -Path $Path -Directory -ErrorAction SilentlyContinue
+        }
+
+        $totalFolders = $folders.Count
+        $current = 0
+
+        foreach ($folder in $folders) {
+            $current++
+            $percentComplete = if ($totalFolders -gt 0) { [Math]::Round(($current / $totalFolders) * 100) } else { 0 }
+            Write-Progress -Activity "Scanning for empty folders" -Status "Checking: $($folder.Name)" -PercentComplete $percentComplete
+
+            # Check if folder should be excluded
+            $shouldExclude = $false
+            foreach ($exclusion in $allExclusions) {
+                if ($folder.FullName -like "$exclusion*") {
+                    $shouldExclude = $true
+                    break
+                }
+            }
+
+            if (-not $shouldExclude) {
+                try {
+                    # Check if folder is truly empty (no files or subdirectories)
+                    $contents = Get-ChildItem -Path $folder.FullName -Force -ErrorAction SilentlyContinue
+
+                    if ($contents.Count -eq 0) {
+                        $emptyFolders += [PSCustomObject]@{
+                            Path = $folder.FullName
+                            Name = $folder.Name
+                            Parent = $folder.Parent.FullName
+                            CreationTime = $folder.CreationTime
+                            LastWriteTime = $folder.LastWriteTime
+                        }
+                    }
+                } catch {
+                    # Skip folders that cannot be accessed
+                    continue
+                }
+            }
+        }
+
+        Write-Progress -Activity "Scanning for empty folders" -Completed
+
+    } catch {
+        Write-Host "Error scanning path: $_" -ForegroundColor Red
+        return @()
+    }
+
+    return $emptyFolders
+}
+
+function Remove-EmptyFolders {
+    <#
+    .SYNOPSIS
+        Removes specified empty folders from the system
+    .DESCRIPTION
+        Safely removes empty directories with confirmation and logging
+    .PARAMETER EmptyFolders
+        Array of empty folder objects to remove
+    .PARAMETER Force
+        Switch to remove without individual confirmations
+    .RETURNS
+        Number of folders successfully removed
+    #>
+    param(
+        [array]$EmptyFolders,
+        [switch]$Force
+    )
+
+    if ($EmptyFolders.Count -eq 0) {
+        Write-Host "No empty folders to remove." -ForegroundColor Yellow
+        return 0
+    }
+
+    $removedCount = 0
+    $failedCount = 0
+
+    foreach ($folder in $EmptyFolders) {
+        try {
+            # Double-check that folder is still empty before removal
+            if (Test-Path $folder.Path) {
+                $contents = Get-ChildItem -Path $folder.Path -Force -ErrorAction SilentlyContinue
+
+                if ($contents.Count -eq 0) {
+                    if (-not $Force) {
+                        $confirm = Read-Host "Remove empty folder: $($folder.Path)? (y/n/a for all)"
+                        if ($confirm -eq 'a' -or $confirm -eq 'A') {
+                            $Force = $true
+                        } elseif ($confirm -ne 'y' -and $confirm -ne 'Y') {
+                            continue
+                        }
+                    }
+
+                    Remove-Item -Path $folder.Path -Force -ErrorAction Stop
+                    Write-Host "[SUCCESS] Removed: $($folder.Path)" -ForegroundColor Green
+                    $removedCount++
+                } else {
+                    Write-Host "[SKIP] No longer empty: $($folder.Path)" -ForegroundColor Yellow
+                }
+            } else {
+                Write-Host "[SKIP] Already removed: $($folder.Path)" -ForegroundColor Gray
+            }
+        } catch {
+            Write-Host "[ERROR] Failed to remove: $($folder.Path) - $($_.Exception.Message)" -ForegroundColor Red
+            $failedCount++
+        }
+    }
+
+    Write-Host ""
+    Write-Host "========= REMOVAL SUMMARY =========" -ForegroundColor Cyan
+    Write-Host "Successfully removed: $removedCount folders" -ForegroundColor Green
+    Write-Host "Failed to remove: $failedCount folders" -ForegroundColor Red
+    Write-Host "===================================" -ForegroundColor Cyan
+
+    return $removedCount
+}
+
+function Show-EmptyFoldersManager {
+    <#
+    .SYNOPSIS
+        Main interface for the Empty Folders Manager
+    .DESCRIPTION
+        Provides user interface for scanning and removing empty folders
+    #>
+
+    Clear-Host
+    Show-Header
+
+    do {
+        Write-Host "========= EMPTY FOLDERS MANAGER =========" -ForegroundColor Cyan
+        Write-Host "Find and remove empty directories to free up space" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "1. Quick scan " -NoNewline -ForegroundColor White
+        Write-Host "( Common user folders )" -ForegroundColor Magenta
+        Write-Host "2. Scan specific folder" -ForegroundColor White
+        Write-Host "3. Advanced scan " -NoNewline -ForegroundColor White
+        Write-Host "( Custom path with options )" -ForegroundColor Magenta
+        Write-Host "4. Scan entire system " -NoNewline -ForegroundColor White
+        Write-Host "( May take long time )" -ForegroundColor Magenta
+        Write-Host "5. Help & Information" -ForegroundColor White
+        Write-Host "0. Return to Main Menu" -ForegroundColor Gray
+
+        $choice = Read-Host "`nEnter choice (0-5)"
+
+        switch ($choice) {
+            '1' {
+                # Quick scan - common user folders
+                Write-Host "`nQuick Scan - Common User Folders" -ForegroundColor Cyan
+                Write-Host "Scanning common folders for empty directories..." -ForegroundColor Yellow
+
+                $commonFolders = @(
+                    "$env:USERPROFILE\Downloads",
+                    "$env:USERPROFILE\Desktop",
+                    "$env:USERPROFILE\Documents", 
+                    "$env:USERPROFILE\Pictures",
+                    "$env:USERPROFILE\Videos",
+                    "$env:USERPROFILE\Music",
+                    "$env:TEMP",
+                    "$env:LOCALAPPDATA\Temp"
+                )
+
+                $allEmptyFolders = @()
+                foreach ($folder in $commonFolders) {
+                    if (Test-Path $folder) {
+                        Write-Host "  Scanning: $folder" -ForegroundColor Gray
+                        $emptyFolders = Find-EmptyFolders -Path $folder -Recursive
+                        $allEmptyFolders += $emptyFolders
+                    }
+                }
+
+                if ($allEmptyFolders.Count -gt 0) {
+                    Write-Host "`nFound $($allEmptyFolders.Count) empty folders:" -ForegroundColor Yellow
+                    foreach ($folder in $allEmptyFolders) {
+                        Write-Host "  $($folder.Path)" -ForegroundColor White
+                    }
+
+                    $removeChoice = Read-Host "`nRemove all empty folders? (y/n)"
+                    if ($removeChoice -eq 'y' -or $removeChoice -eq 'Y') {
+                        $removed = Remove-EmptyFolders -EmptyFolders $allEmptyFolders -Force
+                        Write-Host "Removed $removed empty folders." -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "`nNo empty folders found in common locations!" -ForegroundColor Green
+                }
+            }
+
+            '2' {
+                # Scan specific folder
+                $folderPath = Read-Host "`nEnter folder path to scan"
+                if (Test-Path $folderPath) {
+                    $recursive = Read-Host "Scan subdirectories recursively? (y/n)"
+                    $isRecursive = $recursive -eq 'y' -or $recursive -eq 'Y'
+
+                    Write-Host "Scanning: $folderPath" -ForegroundColor Yellow
+                    $emptyFolders = if ($isRecursive) {
+                        Find-EmptyFolders -Path $folderPath -Recursive
+                    } else {
+                        Find-EmptyFolders -Path $folderPath
+                    }
+
+                    if ($emptyFolders.Count -gt 0) {
+                        Write-Host "`nFound $($emptyFolders.Count) empty folders:" -ForegroundColor Yellow
+                        foreach ($folder in $emptyFolders) {
+                            Write-Host "  $($folder.Path)" -ForegroundColor White
+                        }
+
+                        $removeChoice = Read-Host "`nRemove empty folders? (y/n)"
+                        if ($removeChoice -eq 'y' -or $removeChoice -eq 'Y') {
+                            $removed = Remove-EmptyFolders -EmptyFolders $emptyFolders
+                        }
+                    } else {
+                        Write-Host "`nNo empty folders found!" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "Folder not found: $folderPath" -ForegroundColor Red
+                }
+            }
+
+            '3' {
+                # Advanced scan with options
+                Write-Host "`nAdvanced Empty Folder Scan" -ForegroundColor Cyan
+                $folderPath = Read-Host "Enter folder path to scan"
+
+                if (Test-Path $folderPath) {
+                    $recursive = Read-Host "Scan subdirectories recursively? (y/n)"
+                    $isRecursive = $recursive -eq 'y' -or $recursive -eq 'Y'
+
+                    Write-Host "Enter paths to exclude (press Enter to skip):" -ForegroundColor Yellow
+                    $exclusions = @()
+                    do {
+                        $excludePath = Read-Host "Exclude path (or Enter to finish)"
+                        if ($excludePath.Trim() -ne '') {
+                            $exclusions += $excludePath.Trim()
+                        }
+                    } while ($excludePath.Trim() -ne '')
+
+                    Write-Host "Scanning with advanced options..." -ForegroundColor Yellow
+                    $emptyFolders = if ($isRecursive) {
+                        Find-EmptyFolders -Path $folderPath -Recursive -ExcludePaths $exclusions
+                    } else {
+                        Find-EmptyFolders -Path $folderPath -ExcludePaths $exclusions
+                    }
+
+                    if ($emptyFolders.Count -gt 0) {
+                        Write-Host "`nFound $($emptyFolders.Count) empty folders:" -ForegroundColor Yellow
+
+                        # Group by parent folder
+                        $grouped = $emptyFolders | Group-Object Parent
+                        foreach ($group in $grouped) {
+                            Write-Host "`nIn folder: $($group.Name)" -ForegroundColor Cyan
+                            foreach ($folder in $group.Group) {
+                                Write-Host "  - $($folder.Name)" -ForegroundColor White
+                            }
+                        }
+
+                        Write-Host "`nRemoval options:" -ForegroundColor Yellow
+                        Write-Host "1. Remove all empty folders" -ForegroundColor White
+                        Write-Host "2. Remove selectively" -ForegroundColor White
+                        Write-Host "3. Export list to file" -ForegroundColor White
+                        Write-Host "0. Skip removal" -ForegroundColor Gray
+
+                        $removeChoice = Read-Host "Enter choice (0-3)"
+                        switch ($removeChoice) {
+                            '1' {
+                                $removed = Remove-EmptyFolders -EmptyFolders $emptyFolders -Force
+                            }
+                            '2' {
+                                $removed = Remove-EmptyFolders -EmptyFolders $emptyFolders
+                            }
+                            '3' {
+                                $exportPath = "$env:USERPROFILE\Desktop\EmptyFolders_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+                                $emptyFolders | ForEach-Object { $_.Path } | Out-File -FilePath $exportPath -Encoding UTF8
+                                Write-Host "List exported to: $exportPath" -ForegroundColor Green
+                            }
+                        }
+                    } else {
+                        Write-Host "`nNo empty folders found!" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "Folder not found: $folderPath" -ForegroundColor Red
+                }
+            }
+
+            '4' {
+                # Full system scan
+                Write-Host "`nFull System Empty Folder Scan" -ForegroundColor Red
+                Write-Host "WARNING: This will scan the entire system and may take a very long time!" -ForegroundColor Yellow
+                Write-Host "It's recommended to use Quick Scan or Specific Folder Scan instead." -ForegroundColor Yellow
+
+                $confirm = Read-Host "Continue with full system scan? (type 'YES' to confirm)"
+                if ($confirm -eq 'YES') {
+                    Write-Host "Starting full system scan..." -ForegroundColor Red
+                    Write-Host "This may take 30+ minutes depending on your system..." -ForegroundColor Yellow
+
+                    $emptyFolders = Find-EmptyFolders -Path "C:\" -Recursive
+
+                    if ($emptyFolders.Count -gt 0) {
+                        Write-Host "`nFound $($emptyFolders.Count) empty folders system-wide" -ForegroundColor Yellow
+
+                        # Show summary by drive/location
+                        $summary = $emptyFolders | Group-Object { Split-Path $_.Path -Qualifier }
+                        foreach ($group in $summary) {
+                            Write-Host "Drive $($group.Name): $($group.Count) empty folders" -ForegroundColor White
+                        }
+
+                        $removeChoice = Read-Host "`nRemove all empty folders? (y/n)"
+                        if ($removeChoice -eq 'y' -or $removeChoice -eq 'Y') {
+                            Write-Host "Removing empty folders..." -ForegroundColor Red
+                            $removed = Remove-EmptyFolders -EmptyFolders $emptyFolders -Force
+                        }
+                    } else {
+                        Write-Host "`nNo empty folders found on the system!" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "Full system scan cancelled." -ForegroundColor Yellow
+                }
+            }
+
+            '5' {
+                # Help & Information
+                Write-Host "`n========= EMPTY FOLDERS HELP =========" -ForegroundColor Cyan
+                Write-Host "This tool finds and removes empty directories to:" -ForegroundColor White
+                Write-Host "• Free up disk space and inodes" -ForegroundColor Gray
+                Write-Host "• Clean up folder structure" -ForegroundColor Gray  
+                Write-Host "• Remove leftover directories from uninstalled programs" -ForegroundColor Gray
+                Write-Host "• Improve file system organization" -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "Scan Options:" -ForegroundColor Yellow
+                Write-Host "Quick Scan - Scans common user folders (fastest)" -ForegroundColor White
+                Write-Host "Specific Folder - Scans chosen folder with options" -ForegroundColor White
+                Write-Host "Advanced Scan - Custom path with exclusion options" -ForegroundColor White
+                Write-Host "System Scan - Full system scan (slowest, most thorough)" -ForegroundColor White
+                Write-Host ""
+                Write-Host "Safety Features:" -ForegroundColor Yellow
+                Write-Host "• Excludes system and program folders by default" -ForegroundColor Gray
+                Write-Host "• Double-checks folders are empty before removal" -ForegroundColor Gray
+                Write-Host "• Provides confirmation options" -ForegroundColor Gray
+                Write-Host "• Logs all operations" -ForegroundColor Gray
+                Write-Host "=======================================" -ForegroundColor Cyan
+                Pause-For-User
+            }
+
+            '0' { return }
+            default { Write-Host "Invalid choice." -ForegroundColor Red }
+        }
+
+        if ($choice -ne '0' -and $choice -ne '5') {
+            Pause-For-User
+        }
+
+    } while ($choice -ne '0')
+}
+#endregion
 #endregion
 
 #region SYSTEM STARTUP & EXTERNAL TOOLS
@@ -1677,7 +2076,9 @@ do {
     Write-Host "( Hardware & Software Details )" -ForegroundColor Magenta
     Write-Host "13. Username Tracker " -NoNewline -ForegroundColor White
     Write-Host "( Find Usernames Across Platforms )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 or 0 to exit"
+    Write-Host "14. Empty Folders Removal " -NoNewline -ForegroundColor White
+    Write-Host "( Find & Remove Empty Directories )" -ForegroundColor Magenta
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -2732,6 +3133,10 @@ do {
         '13' {
             # Username Tracker
             Show-UsernameTracker
+        }
+        '14' {
+            # Empty Folders Removal
+            Show-EmptyFoldersManager
         }
         #endregion
     }

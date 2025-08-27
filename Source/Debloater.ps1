@@ -1142,49 +1142,6 @@ STORAGE DEVICES:
     Pause-For-User
 }
 
-function Test-InternetConnectivity {
-    <#
-    .SYNOPSIS
-        Tests internet connectivity using multiple methods
-    .DESCRIPTION
-        Performs various tests to verify internet connection is working
-    .RETURNS
-        Boolean indicating whether internet connectivity is available
-    #>
-
-    Write-Host "Testing internet connectivity..." -ForegroundColor Cyan
-
-    # Test 1: Simple ping to Google DNS
-    try {
-        if (Test-Connection -ComputerName "8.8.8.8" -Count 1 -Quiet -ErrorAction SilentlyContinue) {
-            Write-Host "✓ DNS connectivity: OK" -ForegroundColor Green
-            return $true
-        }
-    } catch {}
-
-    # Test 2: HTTPS request
-    try {
-        $webClient = New-Object System.Net.WebClient
-        $result = $webClient.DownloadString("https://www.msftconnecttest.com/connecttest.txt")
-        $webClient.Dispose()
-        if ($result -like "*Microsoft Connect Test*") {
-            Write-Host "✓ HTTPS connectivity: OK" -ForegroundColor Green
-            return $true
-        }
-    } catch {}
-
-    # Test 3: HTTPS request
-    try {
-        $response = Invoke-RestMethod -Uri "https://httpbin.org/get" -TimeoutSec 5 -ErrorAction SilentlyContinue
-        if ($response) {
-            Write-Host "✓ HTTPS connectivity: OK" -ForegroundColor Green
-            return $true
-        }
-    } catch {}
-
-    Write-Host "✗ All connectivity tests failed" -ForegroundColor Red
-    return $false
-}
 
 function Start-UsernameTracker {
     <#
@@ -1619,15 +1576,12 @@ function Show-UsernameTracker {
         Write-Host "Track username across social media platforms" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "1. Search for Username" -ForegroundColor White
-        Write-Host "2. Test Mode " -NoNewline -ForegroundColor White
-        Write-Host "( Test with Known Profiles )" -ForegroundColor Magenta
-        Write-Host "3. Test Internet Connection" -ForegroundColor White
-        Write-Host "4. View Platform List" -ForegroundColor White
-        Write-Host "5. Batch Username Search" -ForegroundColor White
-        Write-Host "6. Help & Information" -ForegroundColor White
+        Write-Host "2. View Platform List" -ForegroundColor White
+        Write-Host "3. Batch Username Search" -ForegroundColor White
+        Write-Host "4. Help & Information" -ForegroundColor White
         Write-Host "0. Return to Main Menu" -ForegroundColor Gray
 
-        $choice = Read-Host "`nEnter choice (0-6)"
+        $choice = Read-Host "`nEnter choice (0-4)"
 
         switch ($choice) {
             '1' {
@@ -1642,59 +1596,24 @@ function Show-UsernameTracker {
             }
 
             '2' {
-                # Test mode with known profiles
-                Write-Host "`nTesting with known profiles..." -ForegroundColor Cyan
-                $testUsernames = @("github", "microsoft", "google")
-                foreach ($testUser in $testUsernames) {
-                    Write-Host "`nTesting with: $testUser" -ForegroundColor Yellow
-                    Start-UsernameTracker -Username $testUser
-                    Start-Sleep -Seconds 2
-                }
-                Pause-For-User
-            }
-
-            '3' {
-                # Test internet connectivity
-                Write-Host "`nInternet Connectivity Test" -ForegroundColor Cyan
-                Write-Host "==========================" -ForegroundColor Cyan
-                $connectionResult = Test-InternetConnectivity
-                if ($connectionResult) {
-                    Write-Host "`nConnection Status: GOOD ✓" -ForegroundColor Green
-                    Write-Host "You should be able to use the username tracker." -ForegroundColor Green
-                } else {
-                    Write-Host "`nConnection Status: FAILED ✗" -ForegroundColor Red
-                    Write-Host "Possible solutions:" -ForegroundColor Yellow
-                    Write-Host "• Check your internet connection" -ForegroundColor Gray
-                    Write-Host "• Disable antivirus/firewall temporarily" -ForegroundColor Gray
-                    Write-Host "• Run PowerShell as Administrator" -ForegroundColor Gray
-                    Write-Host "• Check proxy settings" -ForegroundColor Gray
-                }
-                Pause-For-User
-            }
-
-            '4' {
                 # Show platform list
                 Write-Host "`n========= SUPPORTED PLATFORMS =========" -ForegroundColor Cyan
                 $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
                              "LinkedIn", "Reddit", "Pinterest", "Snapchat", "Tumblr", "DeviantArt",
                              "Behance", "Dribbble", "Medium", "Twitch", "Discord", "Telegram",
-                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "TryHackMe",
-                             "Codewars", "OpenSea", "Replit", "Codepen", "Notion", "Figma", "ArtStation",
-                             "Unsplash", "Coursera", "Duolingo", "Strava", "Yelp", "Airbnb", "Mastodon",
-                             "Bluesky", "Threads", "VSCO", "Cash App", "Ko-fi", "Linktree", "WordPress",
-                             "Substack", "and 100+ more platforms...")
+                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "and more...")
 
                 $count = 1
                 foreach ($platform in $platforms) {
                     Write-Host "$count. $platform" -ForegroundColor White
                     $count++
-                    if ($count % 6 -eq 1) { Write-Host "" }
+                    if ($count % 5 -eq 1) { Write-Host "" }
                 }
                 Write-Host "=======================================" -ForegroundColor Cyan
                 Pause-For-User
             }
 
-            '5' {
+            '3' {
                 # Batch search
                 Write-Host "`nBatch Username Search" -ForegroundColor Yellow
                 $usernames = Read-Host "Enter usernames separated by commas"
@@ -1711,10 +1630,10 @@ function Show-UsernameTracker {
                 }
             }
 
-            '6' {
+            '4' {
                 # Help
                 Write-Host "`n========= USERNAME TRACKER HELP =========" -ForegroundColor Cyan
-                Write-Host "This tool searches for usernames across 120+ platforms including:" -ForegroundColor White
+                Write-Host "This tool searches for usernames across 50+ platforms including:" -ForegroundColor White
                 Write-Host "• Social Media (Instagram, Twitter, Facebook, TikTok)" -ForegroundColor Gray
                 Write-Host "• Professional (LinkedIn, GitHub, Behance)" -ForegroundColor Gray
                 Write-Host "• Gaming (Steam, Xbox, PlayStation, Twitch)" -ForegroundColor Gray
@@ -1727,19 +1646,12 @@ function Show-UsernameTracker {
                 Write-Host "[-] " -NoNewline -ForegroundColor Red  
                 Write-Host "Not Found - Profile doesn't exist" -ForegroundColor Red
                 Write-Host "[!] " -NoNewline -ForegroundColor Yellow
-                Write-Host "Blocked/Error - Rate limited or protected site" -ForegroundColor Yellow
-                Write-Host ""
-                Write-Host "Improvements made:" -ForegroundColor White
-                Write-Host "• Random user agents to avoid detection" -ForegroundColor Gray
-                Write-Host "• Realistic browser headers added" -ForegroundColor Gray
-                Write-Host "• Automatic retry on rate limits" -ForegroundColor Gray
-                Write-Host "• Random delays between requests" -ForegroundColor Gray
-                Write-Host "• Better error categorization" -ForegroundColor Gray
+                Write-Host "Error - Unable to check (timeout/blocked)" -ForegroundColor Yellow
                 Write-Host ""
                 Write-Host "Tips:" -ForegroundColor White
-                Write-Host "• Use VPN for better success rates" -ForegroundColor Gray
-                Write-Host "• Run during off-peak hours" -ForegroundColor Gray
-                Write-Host "• Some big platforms will always block automation" -ForegroundColor Gray
+                Write-Host "• Use common usernames without special characters" -ForegroundColor Gray
+                Write-Host "• Some platforms may block automated requests" -ForegroundColor Gray
+                Write-Host "• Results can be exported to a text file" -ForegroundColor Gray
                 Write-Host "==========================================" -ForegroundColor Cyan
                 Pause-For-User
             }

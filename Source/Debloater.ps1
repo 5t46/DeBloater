@@ -662,6 +662,444 @@ function Clean-ApplicationLeftovers {
 
     Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
 }
+
+function Get-SystemInformation {
+    <#
+    .SYNOPSIS
+        Gathers comprehensive system information
+    .DESCRIPTION
+        Collects detailed information about hardware, software, network, and system configuration
+    .RETURNS
+        PSCustomObject with system information categories
+    #>
+
+    Write-Host "Gathering system information..." -ForegroundColor Cyan
+
+    $systemInfo = @{}
+
+    try {
+        # Basic System Info
+        $computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+        $operatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem
+        $processor = Get-CimInstance -ClassName Win32_Processor | Select-Object -First 1
+        $memory = Get-CimInstance -ClassName Win32_PhysicalMemory
+        $motherboard = Get-CimInstance -ClassName Win32_BaseBoard
+        $bios = Get-CimInstance -ClassName Win32_BIOS
+
+        # Disk Information
+        $disks = Get-CimInstance -ClassName Win32_LogicalDisk | Where-Object { $_.DriveType -eq 3 }
+        $physicalDisks = Get-CimInstance -ClassName Win32_DiskDrive
+
+        # Network Information
+        $networkAdapters = Get-CimInstance -ClassName Win32_NetworkAdapter | Where-Object { $_.NetConnectionStatus -eq 2 }
+        $networkConfigs = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $_.IPAddress -ne $null }
+
+        # Graphics Information
+        $graphics = Get-CimInstance -ClassName Win32_VideoController
+
+        # Build system info object
+        $systemInfo = [PSCustomObject]@{
+            ComputerName = $computerSystem.Name
+            Domain = $computerSystem.Domain
+            Manufacturer = $computerSystem.Manufacturer
+            Model = $computerSystem.Model
+            SystemType = $computerSystem.SystemType
+            TotalPhysicalMemory = [math]::Round($computerSystem.TotalPhysicalMemory / 1GB, 2)
+
+            # Operating System
+            OSName = $operatingSystem.Caption
+            OSVersion = $operatingSystem.Version
+            OSBuild = $operatingSystem.BuildNumber
+            OSArchitecture = $operatingSystem.OSArchitecture
+            InstallDate = $operatingSystem.InstallDate
+            LastBootUpTime = $operatingSystem.LastBootUpTime
+            WindowsDirectory = $operatingSystem.WindowsDirectory
+            SystemDirectory = $operatingSystem.SystemDirectory
+
+            # Processor
+            ProcessorName = $processor.Name
+            ProcessorCores = $processor.NumberOfCores
+            ProcessorLogicalProcessors = $processor.NumberOfLogicalProcessors
+            ProcessorMaxClockSpeed = $processor.MaxClockSpeed
+            ProcessorArchitecture = switch ($processor.Architecture) {
+                0 { "x86" }
+                1 { "MIPS" }
+                2 { "Alpha" }
+                3 { "PowerPC" }
+                6 { "Intel Itanium" }
+                9 { "x64" }
+                default { "Unknown" }
+            }
+
+            # Memory
+            MemoryModules = $memory.Count
+            TotalInstalledMemory = [math]::Round(($memory | Measure-Object -Property Capacity -Sum).Sum / 1GB, 2)
+            MemorySpeed = ($memory | Select-Object -First 1).Speed
+
+            # Motherboard & BIOS
+            MotherboardManufacturer = $motherboard.Manufacturer
+            MotherboardProduct = $motherboard.Product
+            BIOSVersion = $bios.SMBIOSBIOSVersion
+            BIOSManufacturer = $bios.Manufacturer
+            BIOSReleaseDate = $bios.ReleaseDate
+
+            # Storage
+            Disks = $disks
+            PhysicalDisks = $physicalDisks
+
+            # Network
+            NetworkAdapters = $networkAdapters
+            NetworkConfigs = $networkConfigs
+
+            # Graphics
+            Graphics = $graphics
+        }
+
+    } catch {
+        Write-Host "Error gathering system information: $_" -ForegroundColor Red
+        return $null
+    }
+
+    return $systemInfo
+}
+
+function Show-SystemInformation {
+    <#
+    .SYNOPSIS
+        Displays comprehensive system information in organized sections
+    .DESCRIPTION
+        Shows detailed system information including hardware, software, network, and performance data
+    #>
+
+    $sysInfo = Get-SystemInformation
+
+    if (-not $sysInfo) {
+        Write-Host "Failed to gather system information." -ForegroundColor Red
+        return
+    }
+
+    Clear-Host
+    Show-Header
+
+    # Main System Information Menu
+    do {
+        Write-Host "========= SYSTEM INFORMATION =========" -ForegroundColor Cyan
+        Write-Host "Select information category:" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "1. System Overview" -ForegroundColor White
+        Write-Host "2. Operating System Details" -ForegroundColor White
+        Write-Host "3. Processor Information" -ForegroundColor White
+        Write-Host "4. Memory Information" -ForegroundColor White
+        Write-Host "5. Storage Information" -ForegroundColor White
+        Write-Host "6. Network Information" -ForegroundColor White
+        Write-Host "7. Graphics Information" -ForegroundColor White
+        Write-Host "8. BIOS/UEFI Information" -ForegroundColor White
+        Write-Host "9. Complete System Report" -ForegroundColor Green
+        Write-Host "10. Export Report to File" -ForegroundColor Yellow
+        Write-Host "0. Return to Main Menu" -ForegroundColor Gray
+
+        $choice = Read-Host "`nEnter choice (0-10)"
+
+        switch ($choice) {
+            '1' {
+                # System Overview
+                Write-Host "`n========= SYSTEM OVERVIEW =========" -ForegroundColor Cyan
+                Write-Host "Computer Name    : $($sysInfo.ComputerName)" -ForegroundColor White
+                Write-Host "Domain           : $($sysInfo.Domain)" -ForegroundColor White
+                Write-Host "Manufacturer     : $($sysInfo.Manufacturer)" -ForegroundColor White
+                Write-Host "Model            : $($sysInfo.Model)" -ForegroundColor White
+                Write-Host "System Type      : $($sysInfo.SystemType)" -ForegroundColor White
+                Write-Host "Total RAM        : $($sysInfo.TotalPhysicalMemory) GB" -ForegroundColor White
+                Write-Host "Processor        : $($sysInfo.ProcessorName)" -ForegroundColor White
+                Write-Host "OS Version       : $($sysInfo.OSName)" -ForegroundColor White
+                Write-Host "=====================================" -ForegroundColor Cyan
+            }
+
+            '2' {
+                # Operating System Details
+                Write-Host "`n========= OPERATING SYSTEM =========" -ForegroundColor Cyan
+                Write-Host "OS Name          : $($sysInfo.OSName)" -ForegroundColor White
+                Write-Host "OS Version       : $($sysInfo.OSVersion)" -ForegroundColor White
+                Write-Host "OS Build         : $($sysInfo.OSBuild)" -ForegroundColor White
+                Write-Host "Architecture     : $($sysInfo.OSArchitecture)" -ForegroundColor White
+                Write-Host "Install Date     : $($sysInfo.InstallDate)" -ForegroundColor White
+                Write-Host "Last Boot        : $($sysInfo.LastBootUpTime)" -ForegroundColor White
+                Write-Host "Windows Dir      : $($sysInfo.WindowsDirectory)" -ForegroundColor White
+                Write-Host "System Dir       : $($sysInfo.SystemDirectory)" -ForegroundColor White
+                Write-Host "====================================" -ForegroundColor Cyan
+            }
+
+            '3' {
+                # Processor Information
+                Write-Host "`n========= PROCESSOR INFO =========" -ForegroundColor Cyan
+                Write-Host "Processor Name   : $($sysInfo.ProcessorName)" -ForegroundColor White
+                Write-Host "Architecture     : $($sysInfo.ProcessorArchitecture)" -ForegroundColor White
+                Write-Host "Physical Cores   : $($sysInfo.ProcessorCores)" -ForegroundColor White
+                Write-Host "Logical Cores    : $($sysInfo.ProcessorLogicalProcessors)" -ForegroundColor White
+                Write-Host "Max Clock Speed  : $($sysInfo.ProcessorMaxClockSpeed) MHz" -ForegroundColor White
+                Write-Host "==================================" -ForegroundColor Cyan
+            }
+
+            '4' {
+                # Memory Information
+                Write-Host "`n========= MEMORY INFO =========" -ForegroundColor Cyan
+                Write-Host "Memory Modules   : $($sysInfo.MemoryModules)" -ForegroundColor White
+                Write-Host "Total Installed  : $($sysInfo.TotalInstalledMemory) GB" -ForegroundColor White
+                Write-Host "Memory Speed     : $($sysInfo.MemorySpeed) MHz" -ForegroundColor White
+
+                # Available Memory
+                $availableMemory = [math]::Round((Get-CimInstance -ClassName Win32_OperatingSystem).FreePhysicalMemory / 1MB, 2)
+                $usedMemory = [math]::Round($sysInfo.TotalInstalledMemory - $availableMemory, 2)
+                $memoryUsagePercent = [math]::Round(($usedMemory / $sysInfo.TotalInstalledMemory) * 100, 1)
+
+                Write-Host "Available Memory : $availableMemory GB" -ForegroundColor Green
+                Write-Host "Used Memory      : $usedMemory GB" -ForegroundColor Yellow
+                Write-Host "Memory Usage     : $memoryUsagePercent%" -ForegroundColor $(if ($memoryUsagePercent -gt 80) { "Red" } elseif ($memoryUsagePercent -gt 60) { "Yellow" } else { "Green" })
+                Write-Host "===============================" -ForegroundColor Cyan
+            }
+
+            '5' {
+                # Storage Information
+                Write-Host "`n========= STORAGE INFO =========" -ForegroundColor Cyan
+                Write-Host "Logical Drives:" -ForegroundColor Yellow
+                foreach ($disk in $sysInfo.Disks) {
+                    $totalSize = [math]::Round($disk.Size / 1GB, 2)
+                    $freeSpace = [math]::Round($disk.FreeSpace / 1GB, 2)
+                    $usedSpace = [math]::Round($totalSize - $freeSpace, 2)
+                    $usagePercent = [math]::Round(($usedSpace / $totalSize) * 100, 1)
+
+                    Write-Host "  Drive $($disk.DeviceID)" -ForegroundColor White
+                    Write-Host "    Label       : $($disk.VolumeName)" -ForegroundColor Gray
+                    Write-Host "    File System : $($disk.FileSystem)" -ForegroundColor Gray
+                    Write-Host "    Total Size  : $totalSize GB" -ForegroundColor Gray
+                    Write-Host "    Free Space  : $freeSpace GB" -ForegroundColor Green
+                    Write-Host "    Used Space  : $usedSpace GB" -ForegroundColor Yellow
+                    Write-Host "    Usage       : $usagePercent%" -ForegroundColor $(if ($usagePercent -gt 90) { "Red" } elseif ($usagePercent -gt 75) { "Yellow" } else { "Green" })
+                    Write-Host ""
+                }
+
+                Write-Host "Physical Drives:" -ForegroundColor Yellow
+                foreach ($physDisk in $sysInfo.PhysicalDisks) {
+                    $size = [math]::Round($physDisk.Size / 1GB, 2)
+                    Write-Host "  $($physDisk.Model)" -ForegroundColor White
+                    Write-Host "    Interface   : $($physDisk.InterfaceType)" -ForegroundColor Gray
+                    Write-Host "    Size        : $size GB" -ForegroundColor Gray
+                    Write-Host "    Media Type  : $($physDisk.MediaType)" -ForegroundColor Gray
+                    Write-Host ""
+                }
+                Write-Host "===============================" -ForegroundColor Cyan
+            }
+
+            '6' {
+                # Network Information
+                Write-Host "`n========= NETWORK INFO =========" -ForegroundColor Cyan
+                Write-Host "Active Network Adapters:" -ForegroundColor Yellow
+                foreach ($adapter in $sysInfo.NetworkAdapters) {
+                    Write-Host "  $($adapter.Name)" -ForegroundColor White
+                    Write-Host "    Status      : Connected" -ForegroundColor Green
+                    Write-Host "    Speed       : $($adapter.Speed)" -ForegroundColor Gray
+
+                    # Get IP configuration for this adapter
+                    $config = $sysInfo.NetworkConfigs | Where-Object { $_.Index -eq $adapter.DeviceID }
+                    if ($config) {
+                        Write-Host "    IP Address  : $($config.IPAddress[0])" -ForegroundColor Gray
+                        Write-Host "    Subnet Mask : $($config.IPSubnet[0])" -ForegroundColor Gray
+                        if ($config.DefaultIPGateway) {
+                            Write-Host "    Gateway     : $($config.DefaultIPGateway[0])" -ForegroundColor Gray
+                        }
+                        if ($config.DNSServerSearchOrder) {
+                            Write-Host "    DNS Servers : $($config.DNSServerSearchOrder -join ', ')" -ForegroundColor Gray
+                        }
+                    }
+                    Write-Host ""
+                }
+                Write-Host "==============================" -ForegroundColor Cyan
+            }
+
+            '7' {
+                # Graphics Information
+                Write-Host "`n========= GRAPHICS INFO =========" -ForegroundColor Cyan
+                foreach ($gpu in $sysInfo.Graphics) {
+                    if ($gpu.Name -and $gpu.Name -notlike "*Basic*") {
+                        Write-Host "Graphics Card    : $($gpu.Name)" -ForegroundColor White
+                        Write-Host "Driver Version   : $($gpu.DriverVersion)" -ForegroundColor Gray
+                        Write-Host "Driver Date      : $($gpu.DriverDate)" -ForegroundColor Gray
+                        if ($gpu.AdapterRAM -gt 0) {
+                            $vramGB = [math]::Round($gpu.AdapterRAM / 1GB, 2)
+                            Write-Host "Video Memory     : $vramGB GB" -ForegroundColor Gray
+                        }
+                        Write-Host "Resolution       : $($gpu.CurrentHorizontalResolution) x $($gpu.CurrentVerticalResolution)" -ForegroundColor Gray
+                        Write-Host "Refresh Rate     : $($gpu.CurrentRefreshRate) Hz" -ForegroundColor Gray
+                        Write-Host ""
+                    }
+                }
+                Write-Host "================================" -ForegroundColor Cyan
+            }
+
+            '8' {
+                # BIOS/UEFI Information
+                Write-Host "`n========= BIOS/UEFI INFO =========" -ForegroundColor Cyan
+                Write-Host "Motherboard      : $($sysInfo.MotherboardManufacturer) $($sysInfo.MotherboardProduct)" -ForegroundColor White
+                Write-Host "BIOS Manufacturer: $($sysInfo.BIOSManufacturer)" -ForegroundColor White
+                Write-Host "BIOS Version     : $($sysInfo.BIOSVersion)" -ForegroundColor White
+                Write-Host "BIOS Date        : $($sysInfo.BIOSReleaseDate)" -ForegroundColor White
+                Write-Host "==================================" -ForegroundColor Cyan
+            }
+
+            '9' {
+                # Complete System Report - Show all categories
+                Show-SystemInformation-Complete -SystemInfo $sysInfo
+            }
+
+            '10' {
+                # Export to file
+                Export-SystemReport -SystemInfo $sysInfo
+            }
+
+            '0' { return }
+            default { Write-Host "Invalid choice." -ForegroundColor Red }
+        }
+
+        if ($choice -ne '0' -and $choice -ne '9') {
+            Pause-For-User
+        }
+
+    } while ($choice -ne '0')
+}
+
+function Show-SystemInformation-Complete {
+    param([PSCustomObject]$SystemInfo)
+
+    Clear-Host
+    Write-Host "========= COMPLETE SYSTEM REPORT =========" -ForegroundColor Cyan
+    Write-Host ""
+
+    # All sections in one report
+    Write-Host "SYSTEM OVERVIEW:" -ForegroundColor Yellow
+    Write-Host "Computer Name    : $($SystemInfo.ComputerName)" -ForegroundColor White
+    Write-Host "Manufacturer     : $($SystemInfo.Manufacturer) $($SystemInfo.Model)" -ForegroundColor White
+    Write-Host "Operating System : $($SystemInfo.OSName) ($($SystemInfo.OSBuild))" -ForegroundColor White
+    Write-Host "Processor        : $($SystemInfo.ProcessorName)" -ForegroundColor White
+    Write-Host "Total Memory     : $($SystemInfo.TotalInstalledMemory) GB" -ForegroundColor White
+    Write-Host ""
+
+    Write-Host "STORAGE SUMMARY:" -ForegroundColor Yellow
+    foreach ($disk in $SystemInfo.Disks) {
+        $totalSize = [math]::Round($disk.Size / 1GB, 2)
+        $freeSpace = [math]::Round($disk.FreeSpace / 1GB, 2)
+        $usagePercent = [math]::Round((($totalSize - $freeSpace) / $totalSize) * 100, 1)
+        Write-Host "Drive $($disk.DeviceID) - $totalSize GB ($usagePercent% used)" -ForegroundColor White
+    }
+    Write-Host ""
+
+    Write-Host "NETWORK SUMMARY:" -ForegroundColor Yellow
+    foreach ($config in $SystemInfo.NetworkConfigs) {
+        if ($config.IPAddress[0] -ne "127.0.0.1") {
+            Write-Host "Network: $($config.IPAddress[0])" -ForegroundColor White
+        }
+    }
+    Write-Host ""
+
+    Write-Host "=========================================" -ForegroundColor Cyan
+    Pause-For-User
+}
+
+function Export-SystemReport {
+    param([PSCustomObject]$SystemInfo)
+
+    $reportPath = "$env:USERPROFILE\Desktop\SystemReport_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+
+    try {
+        $report = @"
+========================================
+COMPLETE SYSTEM INFORMATION REPORT
+Generated: $(Get-Date)
+========================================
+
+SYSTEM OVERVIEW:
+Computer Name    : $($SystemInfo.ComputerName)
+Domain           : $($SystemInfo.Domain)
+Manufacturer     : $($SystemInfo.Manufacturer)
+Model            : $($SystemInfo.Model)
+System Type      : $($SystemInfo.SystemType)
+
+OPERATING SYSTEM:
+OS Name          : $($SystemInfo.OSName)
+OS Version       : $($SystemInfo.OSVersion)
+OS Build         : $($SystemInfo.OSBuild)
+Architecture     : $($SystemInfo.OSArchitecture)
+Install Date     : $($SystemInfo.InstallDate)
+Last Boot Time   : $($SystemInfo.LastBootUpTime)
+
+PROCESSOR:
+Processor Name   : $($SystemInfo.ProcessorName)
+Architecture     : $($SystemInfo.ProcessorArchitecture)
+Physical Cores   : $($SystemInfo.ProcessorCores)
+Logical Cores    : $($SystemInfo.ProcessorLogicalProcessors)
+Max Clock Speed  : $($SystemInfo.ProcessorMaxClockSpeed) MHz
+
+MEMORY:
+Memory Modules   : $($SystemInfo.MemoryModules)
+Total Installed  : $($SystemInfo.TotalInstalledMemory) GB
+Memory Speed     : $($SystemInfo.MemorySpeed) MHz
+
+MOTHERBOARD & BIOS:
+Motherboard      : $($SystemInfo.MotherboardManufacturer) $($SystemInfo.MotherboardProduct)
+BIOS Version     : $($SystemInfo.BIOSVersion)
+BIOS Manufacturer: $($SystemInfo.BIOSManufacturer)
+BIOS Date        : $($SystemInfo.BIOSReleaseDate)
+
+STORAGE DEVICES:
+"@
+
+        foreach ($disk in $SystemInfo.Disks) {
+            $totalSize = [math]::Round($disk.Size / 1GB, 2)
+            $freeSpace = [math]::Round($disk.FreeSpace / 1GB, 2)
+            $usedSpace = [math]::Round($totalSize - $freeSpace, 2)
+            $usagePercent = [math]::Round(($usedSpace / $totalSize) * 100, 1)
+
+            $report += "`nDrive $($disk.DeviceID)"
+            $report += "`n  Label: $($disk.VolumeName)"
+            $report += "`n  File System: $($disk.FileSystem)"
+            $report += "`n  Total Size: $totalSize GB"
+            $report += "`n  Free Space: $freeSpace GB"
+            $report += "`n  Used Space: $usedSpace GB ($usagePercent%)"
+        }
+
+        $report += "`n`nNETWORK CONFIGURATION:"
+        foreach ($config in $SystemInfo.NetworkConfigs) {
+            if ($config.IPAddress[0] -ne "127.0.0.1") {
+                $report += "`nIP Address: $($config.IPAddress[0])"
+                $report += "`nSubnet Mask: $($config.IPSubnet[0])"
+                if ($config.DefaultIPGateway) {
+                    $report += "`nGateway: $($config.DefaultIPGateway[0])"
+                }
+                if ($config.DNSServerSearchOrder) {
+                    $report += "`nDNS Servers: $($config.DNSServerSearchOrder -join ', ')"
+                }
+            }
+        }
+
+        $report += "`n`nGRAPHICS:"
+        foreach ($gpu in $SystemInfo.Graphics) {
+            if ($gpu.Name -and $gpu.Name -notlike "*Basic*") {
+                $report += "`nGraphics Card: $($gpu.Name)"
+                $report += "`nDriver Version: $($gpu.DriverVersion)"
+                $report += "`nResolution: $($gpu.CurrentHorizontalResolution) x $($gpu.CurrentVerticalResolution)"
+            }
+        }
+
+        $report += "`n`n========================================`nReport End"
+
+        $report | Out-File -FilePath $reportPath -Encoding UTF8
+        Write-Host "SUCCESS: System report exported to: $reportPath" -ForegroundColor Green
+
+    } catch {
+        Write-Host "ERROR: Failed to export system report: $_" -ForegroundColor Red
+    }
+
+    Pause-For-User
+}
 #endregion
 
 #region SYSTEM STARTUP & EXTERNAL TOOLS
@@ -693,7 +1131,9 @@ do {
     Write-Host "( Like Revo Uninstaller )" -ForegroundColor Magenta
     Write-Host "11. Duplicate File Finder " -NoNewline -ForegroundColor White
     Write-Host "( Find & Remove Duplicates )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 or 0 to exit"
+    Write-Host "12. System Information " -NoNewline -ForegroundColor White
+    Write-Host "( Hardware & Software Details )" -ForegroundColor Magenta
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -1740,6 +2180,10 @@ do {
                 }
 
             } while ($duplicateChoice -ne '0')
+        }
+        '12' {
+            # System Information
+            Show-SystemInformation
         }
         #endregion
     }

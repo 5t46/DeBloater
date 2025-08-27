@@ -1141,6 +1141,329 @@ STORAGE DEVICES:
 
     Pause-For-User
 }
+
+function Start-UsernameTracker {
+    <#
+    .SYNOPSIS
+        Tracks username availability across multiple social media platforms and websites
+    .DESCRIPTION
+        Searches for a given username across popular social media platforms, forums, and websites
+        to check availability and discover potential profiles
+    .PARAMETER Username
+        The username to search for across platforms
+    #>
+    param([string]$Username)
+
+    # Comprehensive list of platforms to check
+    $platforms = @(
+        @{Name="GitHub"; URL="https://github.com/{0}"; SuccessCode=200},
+        @{Name="Instagram"; URL="https://instagram.com/{0}"; SuccessCode=200},
+        @{Name="Twitter"; URL="https://twitter.com/{0}"; SuccessCode=200},
+        @{Name="Facebook"; URL="https://facebook.com/{0}"; SuccessCode=200},
+        @{Name="YouTube"; URL="https://youtube.com/c/{0}"; SuccessCode=200},
+        @{Name="TikTok"; URL="https://tiktok.com/@{0}"; SuccessCode=200},
+        @{Name="LinkedIn"; URL="https://linkedin.com/in/{0}"; SuccessCode=200},
+        @{Name="Reddit"; URL="https://reddit.com/user/{0}"; SuccessCode=200},
+        @{Name="Pinterest"; URL="https://pinterest.com/{0}"; SuccessCode=200},
+        @{Name="Snapchat"; URL="https://snapchat.com/add/{0}"; SuccessCode=200},
+        @{Name="Tumblr"; URL="https://{0}.tumblr.com"; SuccessCode=200},
+        @{Name="DeviantArt"; URL="https://deviantart.com/{0}"; SuccessCode=200},
+        @{Name="Behance"; URL="https://behance.net/{0}"; SuccessCode=200},
+        @{Name="Dribbble"; URL="https://dribbble.com/{0}"; SuccessCode=200},
+        @{Name="Medium"; URL="https://medium.com/@{0}"; SuccessCode=200},
+        @{Name="Twitch"; URL="https://twitch.tv/{0}"; SuccessCode=200},
+        @{Name="Discord"; URL="https://discord.com/users/{0}"; SuccessCode=200},
+        @{Name="Telegram"; URL="https://t.me/{0}"; SuccessCode=200},
+        @{Name="WhatsApp"; URL="https://wa.me/{0}"; SuccessCode=200},
+        @{Name="Spotify"; URL="https://open.spotify.com/user/{0}"; SuccessCode=200},
+        @{Name="SoundCloud"; URL="https://soundcloud.com/{0}"; SuccessCode=200},
+        @{Name="Vimeo"; URL="https://vimeo.com/{0}"; SuccessCode=200},
+        @{Name="Flickr"; URL="https://flickr.com/people/{0}"; SuccessCode=200},
+        @{Name="500px"; URL="https://500px.com/{0}"; SuccessCode=200},
+        @{Name="GitLab"; URL="https://gitlab.com/{0}"; SuccessCode=200},
+        @{Name="Bitbucket"; URL="https://bitbucket.org/{0}"; SuccessCode=200},
+        @{Name="StackOverflow"; URL="https://stackoverflow.com/users/{0}"; SuccessCode=200},
+        @{Name="HackerNews"; URL="https://news.ycombinator.com/user?id={0}"; SuccessCode=200},
+        @{Name="Patreon"; URL="https://patreon.com/{0}"; SuccessCode=200},
+        @{Name="OnlyFans"; URL="https://onlyfans.com/{0}"; SuccessCode=200},
+        @{Name="Keybase"; URL="https://keybase.io/{0}"; SuccessCode=200},
+        @{Name="About.me"; URL="https://about.me/{0}"; SuccessCode=200},
+        @{Name="AngelList"; URL="https://angel.co/{0}"; SuccessCode=200},
+        @{Name="Fiverr"; URL="https://fiverr.com/{0}"; SuccessCode=200},
+        @{Name="Freelancer"; URL="https://freelancer.com/u/{0}"; SuccessCode=200},
+        @{Name="Upwork"; URL="https://upwork.com/freelancers/{0}"; SuccessCode=200},
+        @{Name="Etsy"; URL="https://etsy.com/shop/{0}"; SuccessCode=200},
+        @{Name="Amazon"; URL="https://amazon.com/gp/profile/amzn1.account.{0}"; SuccessCode=200},
+        @{Name="eBay"; URL="https://ebay.com/usr/{0}"; SuccessCode=200},
+        @{Name="Steam"; URL="https://steamcommunity.com/id/{0}"; SuccessCode=200},
+        @{Name="Xbox Live"; URL="https://account.xbox.com/en-us/profile?gamertag={0}"; SuccessCode=200},
+        @{Name="PlayStation"; URL="https://psnprofiles.com/{0}"; SuccessCode=200},
+        @{Name="Roblox"; URL="https://roblox.com/users/{0}/profile"; SuccessCode=200},
+        @{Name="Minecraft"; URL="https://namemc.com/profile/{0}"; SuccessCode=200},
+        @{Name="Fortnite"; URL="https://fortnitetracker.com/profile/all/{0}"; SuccessCode=200},
+        @{Name="Chess.com"; URL="https://chess.com/member/{0}"; SuccessCode=200},
+        @{Name="Lichess"; URL="https://lichess.org/@/{0}"; SuccessCode=200},
+        @{Name="Goodreads"; URL="https://goodreads.com/{0}"; SuccessCode=200},
+        @{Name="IMDb"; URL="https://imdb.com/name/{0}"; SuccessCode=200},
+        @{Name="Letterboxd"; URL="https://letterboxd.com/{0}"; SuccessCode=200},
+        @{Name="MyAnimeList"; URL="https://myanimelist.net/profile/{0}"; SuccessCode=200},
+        @{Name="Crunchyroll"; URL="https://crunchyroll.com/user/{0}"; SuccessCode=200},
+        @{Name="Last.fm"; URL="https://last.fm/user/{0}"; SuccessCode=200}
+    )
+
+    Write-Host "`n========= USERNAME TRACKER =========" -ForegroundColor Cyan
+    Write-Host "Searching for username: $Username" -ForegroundColor Yellow
+    Write-Host "Checking $($platforms.Count) platforms..." -ForegroundColor Gray
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $foundPlatforms = @()
+    $notFoundPlatforms = @()
+    $errorPlatforms = @()
+
+    $total = $platforms.Count
+    $current = 0
+
+    foreach ($platform in $platforms) {
+        $current++
+        $url = $platform.URL -f $Username
+        $percentComplete = [Math]::Round(($current / $total) * 100)
+
+        Write-Progress -Activity "Username Tracker" -Status "Checking $($platform.Name)" -PercentComplete $percentComplete
+
+        try {
+            # Create HTTP request with timeout
+            $request = [System.Net.WebRequest]::Create($url)
+            $request.Method = "HEAD"  # Use HEAD to reduce bandwidth
+            $request.Timeout = 5000   # 5 second timeout
+            $request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+            $response = $request.GetResponse()
+            $statusCode = [int]$response.StatusCode
+            $response.Close()
+
+            if ($statusCode -eq $platform.SuccessCode) {
+                $foundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Found"}
+                Write-Host "[+] " -NoNewline -ForegroundColor Green
+                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                Write-Host "Found" -ForegroundColor Green
+            } else {
+                $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
+                Write-Host "[-] " -NoNewline -ForegroundColor Red
+                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                Write-Host "Not Found" -ForegroundColor Red
+            }
+        }
+        catch [System.Net.WebException] {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            if ($statusCode -eq 404) {
+                $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
+                Write-Host "[-] " -NoNewline -ForegroundColor Red
+                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                Write-Host "Not Found" -ForegroundColor Red
+            } else {
+                $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error"}
+                Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                Write-Host "Error" -ForegroundColor Yellow
+            }
+        }
+        catch {
+            $errorPlatforms += @{Platform=$platform.Name; URL=$url; Status="Error"}
+            Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+            Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+            Write-Host "Error" -ForegroundColor Yellow
+        }
+
+        Start-Sleep -Milliseconds 100  # Small delay to be respectful
+    }
+
+    Write-Progress -Activity "Username Tracker" -Completed
+
+    # Summary
+    Write-Host ""
+    Write-Host "========= SEARCH SUMMARY =========" -ForegroundColor Cyan
+    Write-Host "Username searched: $Username" -ForegroundColor White
+    Write-Host "Total platforms  : $total" -ForegroundColor White
+    Write-Host "Found profiles   : $($foundPlatforms.Count)" -ForegroundColor Green
+    Write-Host "Not found        : $($notFoundPlatforms.Count)" -ForegroundColor Red
+    Write-Host "Errors           : $($errorPlatforms.Count)" -ForegroundColor Yellow
+    Write-Host "==================================" -ForegroundColor Cyan
+
+    # Show found platforms
+    if ($foundPlatforms.Count -gt 0) {
+        Write-Host ""
+        Write-Host "FOUND PROFILES:" -ForegroundColor Green
+        foreach ($found in $foundPlatforms) {
+            Write-Host "  $($found.Platform): $($found.URL)" -ForegroundColor White
+        }
+    }
+
+    # Option to export results
+    Write-Host ""
+    $export = Read-Host "Export results to file? (y/n)"
+    if ($export -eq 'y' -or $export -eq 'Y') {
+        Export-UsernameTrackerResults -Username $Username -Found $foundPlatforms -NotFound $notFoundPlatforms -Errors $errorPlatforms
+    }
+}
+
+function Export-UsernameTrackerResults {
+    param(
+        [string]$Username,
+        [array]$Found,
+        [array]$NotFound,
+        [array]$Errors
+    )
+
+    $exportPath = "$env:USERPROFILE\Desktop\UsernameTracker_${Username}_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
+
+    try {
+        $report = @"
+========================================
+USERNAME TRACKER RESULTS
+Username: $Username
+Scan Date: $(Get-Date)
+========================================
+
+SUMMARY:
+Total platforms checked: $($Found.Count + $NotFound.Count + $Errors.Count)
+Found profiles: $($Found.Count)
+Not found: $($NotFound.Count)
+Errors: $($Errors.Count)
+
+FOUND PROFILES ($($Found.Count)):
+"@
+
+        foreach ($result in $Found) {
+            $report += "`n$($result.Platform): $($result.URL)"
+        }
+
+        if ($NotFound.Count -gt 0) {
+            $report += "`n`nNOT FOUND ($($NotFound.Count)):"
+            foreach ($result in $NotFound) {
+                $report += "`n$($result.Platform): $($result.URL)"
+            }
+        }
+
+        if ($Errors.Count -gt 0) {
+            $report += "`n`nERRORS ($($Errors.Count)):"
+            foreach ($result in $Errors) {
+                $report += "`n$($result.Platform): $($result.URL)"
+            }
+        }
+
+        $report += "`n`n========================================`nReport End"
+
+        $report | Out-File -FilePath $exportPath -Encoding UTF8
+        Write-Host "SUCCESS: Results exported to: $exportPath" -ForegroundColor Green
+
+    } catch {
+        Write-Host "ERROR: Failed to export results: $_" -ForegroundColor Red
+    }
+}
+
+function Show-UsernameTracker {
+    <#
+    .SYNOPSIS
+        Main interface for the Username Tracker feature
+    .DESCRIPTION
+        Provides an interactive menu for username tracking across social media platforms
+    #>
+
+    Clear-Host
+    Show-Header
+
+    do {
+        Write-Host "========= USERNAME TRACKER =========" -ForegroundColor Cyan
+        Write-Host "Track username across social media platforms" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "1. Search for Username" -ForegroundColor White
+        Write-Host "2. View Platform List" -ForegroundColor White
+        Write-Host "3. Batch Username Search" -ForegroundColor White
+        Write-Host "4. Help & Information" -ForegroundColor White
+        Write-Host "0. Return to Main Menu" -ForegroundColor Gray
+
+        $choice = Read-Host "`nEnter choice (0-4)"
+
+        switch ($choice) {
+            '1' {
+                # Single username search
+                $username = Read-Host "`nEnter username to search"
+                if ($username.Trim() -ne '') {
+                    Start-UsernameTracker -Username $username.Trim()
+                    Pause-For-User
+                } else {
+                    Write-Host "Please enter a valid username." -ForegroundColor Red
+                }
+            }
+
+            '2' {
+                # Show platform list
+                Write-Host "`n========= SUPPORTED PLATFORMS =========" -ForegroundColor Cyan
+                $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
+                             "LinkedIn", "Reddit", "Pinterest", "Snapchat", "Tumblr", "DeviantArt",
+                             "Behance", "Dribbble", "Medium", "Twitch", "Discord", "Telegram",
+                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "and more...")
+
+                $count = 1
+                foreach ($platform in $platforms) {
+                    Write-Host "$count. $platform" -ForegroundColor White
+                    $count++
+                    if ($count % 5 -eq 1) { Write-Host "" }
+                }
+                Write-Host "=======================================" -ForegroundColor Cyan
+                Pause-For-User
+            }
+
+            '3' {
+                # Batch search
+                Write-Host "`nBatch Username Search" -ForegroundColor Yellow
+                $usernames = Read-Host "Enter usernames separated by commas"
+                if ($usernames.Trim() -ne '') {
+                    $usernameList = $usernames -split "," | ForEach-Object { $_.Trim() }
+                    foreach ($user in $usernameList) {
+                        if ($user -ne '') {
+                            Write-Host "`n" + ("=" * 50) -ForegroundColor Gray
+                            Start-UsernameTracker -Username $user
+                            Write-Host ("=" * 50) -ForegroundColor Gray
+                        }
+                    }
+                    Pause-For-User
+                }
+            }
+
+            '4' {
+                # Help
+                Write-Host "`n========= USERNAME TRACKER HELP =========" -ForegroundColor Cyan
+                Write-Host "This tool searches for usernames across 50+ platforms including:" -ForegroundColor White
+                Write-Host "• Social Media (Instagram, Twitter, Facebook, TikTok)" -ForegroundColor Gray
+                Write-Host "• Professional (LinkedIn, GitHub, Behance)" -ForegroundColor Gray
+                Write-Host "• Gaming (Steam, Xbox, PlayStation, Twitch)" -ForegroundColor Gray
+                Write-Host "• Creative (YouTube, SoundCloud, DeviantArt)" -ForegroundColor Gray
+                Write-Host "• Forums (Reddit, StackOverflow, HackerNews)" -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "Color coding:" -ForegroundColor White
+                Write-Host "[+] " -NoNewline -ForegroundColor Green
+                Write-Host "Found - Profile exists" -ForegroundColor Green
+                Write-Host "[-] " -NoNewline -ForegroundColor Red  
+                Write-Host "Not Found - Profile doesn't exist" -ForegroundColor Red
+                Write-Host "[!] " -NoNewline -ForegroundColor Yellow
+                Write-Host "Error - Unable to check (timeout/blocked)" -ForegroundColor Yellow
+                Write-Host ""
+                Write-Host "Tips:" -ForegroundColor White
+                Write-Host "• Use common usernames without special characters" -ForegroundColor Gray
+                Write-Host "• Some platforms may block automated requests" -ForegroundColor Gray
+                Write-Host "• Results can be exported to a text file" -ForegroundColor Gray
+                Write-Host "==========================================" -ForegroundColor Cyan
+                Pause-For-User
+            }
+
+            '0' { return }
+            default { Write-Host "Invalid choice." -ForegroundColor Red }
+        }
+
+    } while ($choice -ne '0')
+}
 #endregion
 
 #region SYSTEM STARTUP & EXTERNAL TOOLS
@@ -1174,7 +1497,9 @@ do {
     Write-Host "( Find & Remove Duplicates )" -ForegroundColor Magenta
     Write-Host "12. System Information " -NoNewline -ForegroundColor White
     Write-Host "( Hardware & Software Details )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 or 0 to exit"
+    Write-Host "13. Username Tracker " -NoNewline -ForegroundColor White
+    Write-Host "( Find Usernames Across Platforms )" -ForegroundColor Magenta
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -2225,6 +2550,10 @@ do {
         '12' {
             # System Information
             Show-SystemInformation
+        }
+        '13' {
+            # Username Tracker
+            Show-UsernameTracker
         }
         #endregion
     }

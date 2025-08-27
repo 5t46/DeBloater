@@ -1142,6 +1142,50 @@ STORAGE DEVICES:
     Pause-For-User
 }
 
+function Test-InternetConnectivity {
+    <#
+    .SYNOPSIS
+        Tests internet connectivity using multiple methods
+    .DESCRIPTION
+        Performs various tests to verify internet connection is working
+    .RETURNS
+        Boolean indicating whether internet connectivity is available
+    #>
+
+    Write-Host "Testing internet connectivity..." -ForegroundColor Cyan
+
+    # Test 1: Simple ping to Google DNS
+    try {
+        if (Test-Connection -ComputerName "8.8.8.8" -Count 1 -Quiet -ErrorAction SilentlyContinue) {
+            Write-Host "✓ DNS connectivity: OK" -ForegroundColor Green
+            return $true
+        }
+    } catch {}
+
+    # Test 2: HTTPS request
+    try {
+        $webClient = New-Object System.Net.WebClient
+        $result = $webClient.DownloadString("https://www.msftconnecttest.com/connecttest.txt")
+        $webClient.Dispose()
+        if ($result -like "*Microsoft Connect Test*") {
+            Write-Host "✓ HTTPS connectivity: OK" -ForegroundColor Green
+            return $true
+        }
+    } catch {}
+
+    # Test 3: HTTPS request
+    try {
+        $response = Invoke-RestMethod -Uri "https://httpbin.org/get" -TimeoutSec 5 -ErrorAction SilentlyContinue
+        if ($response) {
+            Write-Host "✓ HTTPS connectivity: OK" -ForegroundColor Green
+            return $true
+        }
+    } catch {}
+
+    Write-Host "✗ All connectivity tests failed" -ForegroundColor Red
+    return $false
+}
+
 function Start-UsernameTracker {
     <#
     .SYNOPSIS
@@ -1167,11 +1211,11 @@ function Start-UsernameTracker {
         @{Name="Pinterest"; URL="https://pinterest.com/{0}"; SuccessCode=200},
         @{Name="Snapchat"; URL="https://snapchat.com/add/{0}"; SuccessCode=200},
         @{Name="Tumblr"; URL="https://{0}.tumblr.com"; SuccessCode=200},
-        @{Name="DeviantArt"; URL="https://deviantart.com/{0}"; SuccessCode=200},
-        @{Name="Behance"; URL="https://behance.net/{0}"; SuccessCode=200},
+        @{Name="DeviantArt"; URL="https://www.deviantart.com/{0}"; SuccessCode=200},
+        @{Name="Behance"; URL="https://www.behance.net/{0}"; SuccessCode=200},
         @{Name="Dribbble"; URL="https://dribbble.com/{0}"; SuccessCode=200},
         @{Name="Medium"; URL="https://medium.com/@{0}"; SuccessCode=200},
-        @{Name="Twitch"; URL="https://twitch.tv/{0}"; SuccessCode=200},
+        @{Name="Twitch"; URL="https://www.twitch.tv/{0}"; SuccessCode=200},
         @{Name="Discord"; URL="https://discord.com/users/{0}"; SuccessCode=200},
         @{Name="Telegram"; URL="https://t.me/{0}"; SuccessCode=200},
         @{Name="WhatsApp"; URL="https://wa.me/{0}"; SuccessCode=200},
@@ -1301,16 +1345,64 @@ function Start-UsernameTracker {
     $current = 0
 
     # Configure TLS settings for modern websites
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
-
-    # Test internet connectivity first
     try {
-        $testResponse = Invoke-WebRequest -Uri "https://www.google.com" -Method Head -TimeoutSec 5 -ErrorAction Stop
-        Write-Host "Internet connection verified" -ForegroundColor Green
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+        Write-Host "TLS configuration set successfully" -ForegroundColor Green
     } catch {
-        Write-Host "Internet connection issue detected!" -ForegroundColor Red
-        return
+        Write-Host "Warning: Could not configure TLS settings" -ForegroundColor Yellow
+    }
+
+    # Test internet connectivity with multiple methods
+    $connectionTest = $false
+
+    # Method 1: Test with simple ping
+    Write-Host "Testing internet connectivity..." -ForegroundColor Cyan
+    try {
+        $pingResult = Test-Connection -ComputerName "8.8.8.8" -Count 1 -Quiet -ErrorAction SilentlyContinue
+        if ($pingResult) {
+            Write-Host "✓ Ping test successful" -ForegroundColor Green
+            $connectionTest = $true
+        }
+    } catch {}
+
+    # Method 2: Test with simple web request if ping failed
+    if (-not $connectionTest) {
+        try {
+            $webClient = New-Object System.Net.WebClient
+            $webClient.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+            $null = $webClient.DownloadString("https://www.google.com")
+            $webClient.Dispose()
+            Write-Host "✓ Web request test successful" -ForegroundColor Green
+            $connectionTest = $true
+        } catch {}
+    }
+
+    # Method 3: Test with Invoke-WebRequest as last resort
+    if (-not $connectionTest) {
+        try {
+            $null = Invoke-WebRequest -Uri "https://www.google.com" -Method Head -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+            Write-Host "✓ Advanced web test successful" -ForegroundColor Green
+            $connectionTest = $true
+        } catch {}
+    }
+
+    # If all tests failed, ask user if they want to continue
+    if (-not $connectionTest) {
+        Write-Host "⚠ Internet connectivity tests failed!" -ForegroundColor Red
+        Write-Host "This could be due to:" -ForegroundColor Yellow
+        Write-Host "• Firewall or antivirus blocking PowerShell" -ForegroundColor Gray
+        Write-Host "• Proxy server configuration" -ForegroundColor Gray
+        Write-Host "• Network restrictions" -ForegroundColor Gray
+        Write-Host "• PowerShell execution policy" -ForegroundColor Gray
+
+        $continueAnyway = Read-Host "`nDo you want to continue anyway? (y/n)"
+        if ($continueAnyway -ne 'y' -and $continueAnyway -ne 'Y') {
+            Write-Host "Username tracking cancelled." -ForegroundColor Yellow
+            return
+        } else {
+            Write-Host "Continuing without connectivity verification..." -ForegroundColor Yellow
+        }
     }
 
     foreach ($platform in $platforms) {
@@ -1321,22 +1413,48 @@ function Start-UsernameTracker {
         Write-Progress -Activity "Username Tracker" -Status "Checking $($platform.Name)" -PercentComplete $percentComplete
 
         try {
-            # Use Invoke-WebRequest with simplified approach
-            $headers = @{
-                'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                'Accept' = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-                'Accept-Language' = 'en-US,en;q=0.5'
-            }
+            # Try multiple approaches for better success rate
+            $success = $false
 
-            $response = Invoke-WebRequest -Uri $url -Method Head -Headers $headers -TimeoutSec 8 -ErrorAction Stop -MaximumRedirection 5
+            # Method 1: Use WebClient (often more reliable)
+            try {
+                $webClient = New-Object System.Net.WebClient
+                $webClient.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+                $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                $webClient.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
-            # Check response status
-            if ($response.StatusCode -eq 200) {
+                # Try to access the URL
+                $null = $webClient.DownloadString($url)
+                $webClient.Dispose()
+
                 $foundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Found"}
                 Write-Host "[+] " -NoNewline -ForegroundColor Green
                 Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
                 Write-Host "$url" -ForegroundColor Green
-            } else {
+                $success = $true
+            }
+            catch {
+                # Method 2: Fallback to Invoke-WebRequest if WebClient fails
+                if (-not $success) {
+                    $headers = @{
+                        'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                        'Accept' = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                        'Accept-Language' = 'en-US,en;q=0.5'
+                    }
+
+                    $response = Invoke-WebRequest -Uri $url -Method Head -Headers $headers -TimeoutSec 10 -ErrorAction Stop -MaximumRedirection 5 -UseBasicParsing
+
+                    if ($response.StatusCode -eq 200) {
+                        $foundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Found"}
+                        Write-Host "[+] " -NoNewline -ForegroundColor Green
+                        Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
+                        Write-Host "$url" -ForegroundColor Green
+                        $success = $true
+                    }
+                }
+            }
+
+            if (-not $success) {
                 $notFoundPlatforms += @{Platform=$platform.Name; URL=$url; Status="Not Found"}
                 Write-Host "[-] " -NoNewline -ForegroundColor Red
                 Write-Host "$($platform.Name.PadRight(20)) " -NoNewline -ForegroundColor White
@@ -1489,12 +1607,13 @@ function Show-UsernameTracker {
         Write-Host "1. Search for Username" -ForegroundColor White
         Write-Host "2. Test Mode " -NoNewline -ForegroundColor White
         Write-Host "( Test with Known Profiles )" -ForegroundColor Magenta
-        Write-Host "3. View Platform List" -ForegroundColor White
-        Write-Host "4. Batch Username Search" -ForegroundColor White
-        Write-Host "5. Help & Information" -ForegroundColor White
+        Write-Host "3. Test Internet Connection" -ForegroundColor White
+        Write-Host "4. View Platform List" -ForegroundColor White
+        Write-Host "5. Batch Username Search" -ForegroundColor White
+        Write-Host "6. Help & Information" -ForegroundColor White
         Write-Host "0. Return to Main Menu" -ForegroundColor Gray
 
-        $choice = Read-Host "`nEnter choice (0-5)"
+        $choice = Read-Host "`nEnter choice (0-6)"
 
         switch ($choice) {
             '1' {
@@ -1521,6 +1640,25 @@ function Show-UsernameTracker {
             }
 
             '3' {
+                # Test internet connectivity
+                Write-Host "`nInternet Connectivity Test" -ForegroundColor Cyan
+                Write-Host "==========================" -ForegroundColor Cyan
+                $connectionResult = Test-InternetConnectivity
+                if ($connectionResult) {
+                    Write-Host "`nConnection Status: GOOD ✓" -ForegroundColor Green
+                    Write-Host "You should be able to use the username tracker." -ForegroundColor Green
+                } else {
+                    Write-Host "`nConnection Status: FAILED ✗" -ForegroundColor Red
+                    Write-Host "Possible solutions:" -ForegroundColor Yellow
+                    Write-Host "• Check your internet connection" -ForegroundColor Gray
+                    Write-Host "• Disable antivirus/firewall temporarily" -ForegroundColor Gray
+                    Write-Host "• Run PowerShell as Administrator" -ForegroundColor Gray
+                    Write-Host "• Check proxy settings" -ForegroundColor Gray
+                }
+                Pause-For-User
+            }
+
+            '4' {
                 # Show platform list
                 Write-Host "`n========= SUPPORTED PLATFORMS =========" -ForegroundColor Cyan
                 $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
@@ -1542,7 +1680,7 @@ function Show-UsernameTracker {
                 Pause-For-User
             }
 
-            '4' {
+            '5' {
                 # Batch search
                 Write-Host "`nBatch Username Search" -ForegroundColor Yellow
                 $usernames = Read-Host "Enter usernames separated by commas"
@@ -1559,7 +1697,7 @@ function Show-UsernameTracker {
                 }
             }
 
-            '5' {
+            '6' {
                 # Help
                 Write-Host "`n========= USERNAME TRACKER HELP =========" -ForegroundColor Cyan
                 Write-Host "This tool searches for usernames across 120+ platforms including:" -ForegroundColor White

@@ -1561,13 +1561,6 @@ FOUND PROFILES ($($Found.Count)):
 }
 
 function Show-UsernameTracker {
-    <#
-    .SYNOPSIS
-        Main interface for the Username Tracker feature
-    .DESCRIPTION
-        Provides an interactive menu for username tracking across social media platforms
-    #>
-
     Clear-Host
     Show-Header
 
@@ -1585,7 +1578,6 @@ function Show-UsernameTracker {
 
         switch ($choice) {
             '1' {
-                # Single username search
                 $username = Read-Host "`nEnter username to search"
                 if ($username.Trim() -ne '') {
                     Start-UsernameTracker -Username $username.Trim()
@@ -1596,12 +1588,11 @@ function Show-UsernameTracker {
             }
 
             '2' {
-                # Show platform list
                 Write-Host "`n========= SUPPORTED PLATFORMS =========" -ForegroundColor Cyan
                 $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
                              "LinkedIn", "Reddit", "Pinterest", "Snapchat", "Tumblr", "DeviantArt",
                              "Behance", "Dribbble", "Medium", "Twitch", "Discord", "Telegram",
-                             "Spotify", "SoundCloud", "Steam", "Xbox Live", "PlayStation", "and more...")
+                             "Spotify", "SoundCloud", "Steam", "Last.fm")
 
                 $count = 1
                 foreach ($platform in $platforms) {
@@ -1614,7 +1605,6 @@ function Show-UsernameTracker {
             }
 
             '3' {
-                # Batch search
                 Write-Host "`nBatch Username Search" -ForegroundColor Yellow
                 $usernames = Read-Host "Enter usernames separated by commas"
                 if ($usernames.Trim() -ne '') {
@@ -1631,27 +1621,17 @@ function Show-UsernameTracker {
             }
 
             '4' {
-                # Help
                 Write-Host "`n========= USERNAME TRACKER HELP =========" -ForegroundColor Cyan
-                Write-Host "This tool searches for usernames across 50+ platforms including:" -ForegroundColor White
+                Write-Host "This tool searches for usernames across social media platforms:" -ForegroundColor White
                 Write-Host "• Social Media (Instagram, Twitter, Facebook, TikTok)" -ForegroundColor Gray
                 Write-Host "• Professional (LinkedIn, GitHub, Behance)" -ForegroundColor Gray
-                Write-Host "• Gaming (Steam, Xbox, PlayStation, Twitch)" -ForegroundColor Gray
+                Write-Host "• Gaming (Steam, Twitch)" -ForegroundColor Gray
                 Write-Host "• Creative (YouTube, SoundCloud, DeviantArt)" -ForegroundColor Gray
-                Write-Host "• Forums (Reddit, StackOverflow, HackerNews)" -ForegroundColor Gray
                 Write-Host ""
                 Write-Host "Color coding:" -ForegroundColor White
-                Write-Host "[+] " -NoNewline -ForegroundColor Green
-                Write-Host "Found - Profile exists" -ForegroundColor Green
-                Write-Host "[-] " -NoNewline -ForegroundColor Red  
-                Write-Host "Not Found - Profile doesn't exist" -ForegroundColor Red
-                Write-Host "[!] " -NoNewline -ForegroundColor Yellow
-                Write-Host "Error - Unable to check (timeout/blocked)" -ForegroundColor Yellow
-                Write-Host ""
-                Write-Host "Tips:" -ForegroundColor White
-                Write-Host "• Use common usernames without special characters" -ForegroundColor Gray
-                Write-Host "• Some platforms may block automated requests" -ForegroundColor Gray
-                Write-Host "• Results can be exported to a text file" -ForegroundColor Gray
+                Write-Host "[+] Found - Profile exists" -ForegroundColor Green
+                Write-Host "[-] Not Found - Profile doesn't exist" -ForegroundColor Red
+                Write-Host "[!] Error - Unable to check" -ForegroundColor Yellow
                 Write-Host "==========================================" -ForegroundColor Cyan
                 Pause-For-User
             }

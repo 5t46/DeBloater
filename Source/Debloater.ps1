@@ -343,7 +343,7 @@ function Find-DuplicateFiles {
         $hashGroups = @{}
         foreach ($file in $sizeGroup.Group) {
             $hash = Get-FileHash-MD5 -FilePath $file.FullName
-            if ($hash) {
+            if ($null -ne $hash) {
                 if (-not $hashGroups.ContainsKey($hash)) {
                     $hashGroups[$hash] = @()
                 }
@@ -528,78 +528,119 @@ function Remove-ApplicationCompletely {
         }
     }
 
-    Write-Host "STEP 2: Removing installation files..." -ForegroundColor Yellow
-    if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
-        try {
-            Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
-            Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
-        } catch {
-            Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
+    # Only proceed with cleanup if uninstall was successful or if we want to force cleanup
+    if ($uninstallSuccess) {
+        Write-Host "STEP 2: Removing installation files..." -ForegroundColor Yellow
+        if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
+            try {
+                Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
+                Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
+            } catch {
+                Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
+            }
         }
-    }
 
-    Write-Host "STEP 3: Cleaning registry entries..." -ForegroundColor Yellow
-    $regPathsToClean = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-        "HKLM:\SOFTWARE\$($App.Publisher)",
-        "HKCU:\SOFTWARE\$($App.Publisher)",
-        "HKLM:\SOFTWARE\$($App.Name)",
-        "HKCU:\SOFTWARE\$($App.Name)"
-    )
+        Write-Host "STEP 3: Cleaning registry entries..." -ForegroundColor Yellow
+        $regPathsToClean = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            "HKLM:\SOFTWARE\$($App.Publisher)",
+            "HKCU:\SOFTWARE\$($App.Publisher)",
+            "HKLM:\SOFTWARE\$($App.Name)",
+            "HKCU:\SOFTWARE\$($App.Name)"
+        )
 
-    foreach ($regPath in $regPathsToClean) {
-        try {
-            if (Test-Path $regPath) {
-                $subKeys = Get-ChildItem $regPath -ErrorAction SilentlyContinue
-                foreach ($key in $subKeys) {
-                    $displayName = (Get-ItemProperty $key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-                    if ($displayName -like "*$($App.Name)*") {
-                        Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
-                        Write-Host "  Cleaned registry key: $($key.Name)" -ForegroundColor Gray
+        foreach ($regPath in $regPathsToClean) {
+            try {
+                if (Test-Path $regPath) {
+                    $subKeys = Get-ChildItem $regPath -ErrorAction SilentlyContinue
+                    foreach ($key in $subKeys) {
+                        $displayName = (Get-ItemProperty $key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
+                        if ($displayName -like "*$($App.Name)*") {
+                            Remove-Item $key.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+                            Write-Host "  Cleaned registry key: $($key.Name)" -ForegroundColor Gray
+                        }
                     }
                 }
+            } catch {}
+        }
+
+        Write-Host "STEP 4: Removing user data and settings..." -ForegroundColor Yellow
+        $userDataPaths = @(
+            "$env:APPDATA\$($App.Name)",
+            "$env:LOCALAPPDATA\$($App.Name)",
+            "$env:APPDATA\$($App.Publisher)",
+            "$env:LOCALAPPDATA\$($App.Publisher)",
+            "$env:USERPROFILE\Documents\$($App.Name)"
+        )
+
+        foreach ($path in $userDataPaths) {
+            if (Test-Path $path) {
+                try {
+                    Remove-Item $path -Recurse -Force -ErrorAction Stop
+                    Write-Host "  Removed user data: $path" -ForegroundColor Gray
+                } catch {}
             }
-        } catch {}
-    }
+        }
 
-    Write-Host "STEP 4: Removing user data and settings..." -ForegroundColor Yellow
-    $userDataPaths = @(
-        "$env:APPDATA\$($App.Name)",
-        "$env:LOCALAPPDATA\$($App.Name)",
-        "$env:APPDATA\$($App.Publisher)",
-        "$env:LOCALAPPDATA\$($App.Publisher)",
-        "$env:USERPROFILE\Documents\$($App.Name)"
-    )
+        Write-Host "STEP 5: Cleaning temporary files and caches..." -ForegroundColor Yellow
+        $tempPaths = @(
+            "$env:TEMP\$($App.Name)",
+            "$env:TEMP\$($App.Publisher)",
+            "$env:LOCALAPPDATA\Temp\$($App.Name)"
+        )
 
-    foreach ($path in $userDataPaths) {
-        if (Test-Path $path) {
-            try {
-                Remove-Item $path -Recurse -Force -ErrorAction Stop
-                Write-Host "  Removed user data: $path" -ForegroundColor Gray
-            } catch {}
+        foreach ($path in $tempPaths) {
+            if (Test-Path $path) {
+                try {
+                    Remove-Item $path -Recurse -Force -ErrorAction Stop
+                    Write-Host "  Cleaned temp files: $path" -ForegroundColor Gray
+                } catch {}
+            }
+        }
+
+        Write-Host "COMPLETE REMOVAL FINISHED!" -ForegroundColor Green
+        Write-Host "Application '$($App.Name)' has been completely removed from the system." -ForegroundColor Green
+    } else {
+        Write-Host "WARNING: Application uninstall failed!" -ForegroundColor Red
+        $forceCleanup = Read-Host "Do you want to force cleanup of leftover files anyway? (y/n)"
+
+        if ($forceCleanup -eq 'y' -or $forceCleanup -eq 'Y') {
+            Write-Host "FORCING cleanup of leftover files..." -ForegroundColor Yellow
+
+            # Force cleanup even if uninstall failed
+            if ($App.InstallLocation -and (Test-Path $App.InstallLocation)) {
+                try {
+                    Remove-Item $App.InstallLocation -Recurse -Force -ErrorAction Stop
+                    Write-Host "SUCCESS: Installation folder removed" -ForegroundColor Green
+                } catch {
+                    Write-Host "ERROR: Could not remove installation folder" -ForegroundColor Red
+                }
+            }
+
+            # Clean user data paths
+            $userDataPaths = @(
+                "$env:APPDATA\$($App.Name)",
+                "$env:LOCALAPPDATA\$($App.Name)",
+                "$env:APPDATA\$($App.Publisher)",
+                "$env:LOCALAPPDATA\$($App.Publisher)"
+            )
+
+            foreach ($path in $userDataPaths) {
+                if (Test-Path $path) {
+                    try {
+                        Remove-Item $path -Recurse -Force -ErrorAction Stop
+                        Write-Host "  Removed leftover data: $path" -ForegroundColor Gray
+                    } catch {}
+                }
+            }
+
+            Write-Host "FORCED cleanup completed." -ForegroundColor Yellow
+        } else {
+            Write-Host "Cleanup cancelled. Some files may remain on the system." -ForegroundColor Yellow
         }
     }
-
-    Write-Host "STEP 5: Cleaning temporary files and caches..." -ForegroundColor Yellow
-    $tempPaths = @(
-        "$env:TEMP\$($App.Name)",
-        "$env:TEMP\$($App.Publisher)",
-        "$env:LOCALAPPDATA\Temp\$($App.Name)"
-    )
-
-    foreach ($path in $tempPaths) {
-        if (Test-Path $path) {
-            try {
-                Remove-Item $path -Recurse -Force -ErrorAction Stop
-                Write-Host "  Cleaned temp files: $path" -ForegroundColor Gray
-            } catch {}
-        }
-    }
-
-    Write-Host "COMPLETE REMOVAL FINISHED!" -ForegroundColor Green
-    Write-Host "Application '$($App.Name)' has been completely removed from the system." -ForegroundColor Green
 }
 
 function Find-ApplicationLeftovers {
@@ -638,29 +679,29 @@ function Find-ApplicationLeftovers {
     return $leftovers
 }
 
-function Clean-ApplicationLeftovers {
+function Remove-ApplicationLeftovers {
     <#
     .SYNOPSIS
         Removes leftover application traces from the system
     .DESCRIPTION
-        Cleans up empty folders and other remnants identified by Find-ApplicationLeftovers
+        Removes empty folders and other remnants identified by Find-ApplicationLeftovers
     .PARAMETER Leftovers
-        Array of leftover items to clean up
+        Array of leftover items to remove
     #>
     param([array]$Leftovers)
 
-    $cleaned = 0
+    $removed = 0
     foreach ($leftover in $Leftovers) {
         try {
             Remove-Item $leftover.Path -Force -Recurse -ErrorAction Stop
-            Write-Host "SUCCESS: Cleaned $($leftover.Type): $($leftover.Path)" -ForegroundColor Green
-            $cleaned++
+            Write-Host "SUCCESS: Removed $($leftover.Type): $($leftover.Path)" -ForegroundColor Green
+            $removed++
         } catch {
-            Write-Host "ERROR: Could not clean $($leftover.Path)" -ForegroundColor Red
+            Write-Host "ERROR: Could not remove $($leftover.Path)" -ForegroundColor Red
         }
     }
 
-    Write-Host "Cleaned $cleaned leftover items." -ForegroundColor Green
+    Write-Host "Removed $removed leftover items." -ForegroundColor Green
 }
 
 function Get-SystemInformation {
@@ -692,7 +733,7 @@ function Get-SystemInformation {
 
         # Network Information
         $networkAdapters = Get-CimInstance -ClassName Win32_NetworkAdapter | Where-Object { $_.NetConnectionStatus -eq 2 }
-        $networkConfigs = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $_.IPAddress -ne $null }
+        $networkConfigs = Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $null -ne $_.IPAddress }
 
         # Graphics Information
         $graphics = Get-CimInstance -ClassName Win32_VideoController
@@ -773,7 +814,7 @@ function Show-SystemInformation {
 
     $sysInfo = Get-SystemInformation
 
-    if (-not $sysInfo) {
+    if ($null -eq $sysInfo) {
         Write-Host "Failed to gather system information." -ForegroundColor Red
         return
     }
@@ -2076,7 +2117,7 @@ do {
 
                             $cleanLeftovers = Read-Host "`nRemove all leftover traces? (y/n)"
                             if ($cleanLeftovers -eq 'y' -or $cleanLeftovers -eq 'Y') {
-                                Clean-ApplicationLeftovers -Leftovers $leftovers
+                                Remove-ApplicationLeftovers -Leftovers $leftovers
                             }
                         } else {
                             Write-Host "No leftover traces found!" -ForegroundColor Green

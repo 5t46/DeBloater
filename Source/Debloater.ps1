@@ -1344,11 +1344,16 @@ function Start-UsernameTracker {
     $total = $platforms.Count
     $current = 0
 
-    # Configure TLS settings for modern websites
+    # Store original TLS settings to restore later
+    $originalProtocol = [Net.ServicePointManager]::SecurityProtocol
+    $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
+
+    # Temporarily configure TLS settings only for this function
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
-        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
-        Write-Host "TLS configuration set successfully" -ForegroundColor Green
+        # Only override certificate validation if really needed for specific sites
+        # [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+        Write-Host "TLS configuration applied for username tracking" -ForegroundColor Green
     } catch {
         Write-Host "Warning: Could not configure TLS settings" -ForegroundColor Yellow
     }
@@ -1531,6 +1536,15 @@ function Start-UsernameTracker {
     $export = Read-Host "Export results to file? (y/n)"
     if ($export -eq 'y' -or $export -eq 'Y') {
         Export-UsernameTrackerResults -Username $Username -Found $foundPlatforms -NotFound $notFoundPlatforms -Errors $errorPlatforms
+    }
+
+    # Restore original TLS settings to not interfere with other operations
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = $originalProtocol
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $originalCallback
+        Write-Host "Original network settings restored" -ForegroundColor Green
+    } catch {
+        Write-Host "Note: Network settings may need manual reset" -ForegroundColor Yellow
     }
 }
 

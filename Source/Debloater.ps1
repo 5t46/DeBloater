@@ -172,7 +172,6 @@ function Show-MenuWithKeyboard {
     }
 }
 
-
 function Show-Header {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan

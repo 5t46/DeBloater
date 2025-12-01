@@ -170,6 +170,7 @@ function Show-MenuWithKeyboard {
         }
     }
 }
+1
 
 Show-Header
 

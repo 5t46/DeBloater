@@ -2080,8 +2080,8 @@ do {
     Write-Host "( Find Usernames Across Platforms )" -ForegroundColor Magenta
     Write-Host "14. Empty Folders Removal " -NoNewline -ForegroundColor White
     Write-Host "( Find & Remove Empty Directories )" -ForegroundColor Magenta
-    Write-Host "15. Open Links " -NoNewline -ForegroundColor White
-    Write-Host "( Open useful links in browser )" -ForegroundColor Magenta
+    Write-Host "15. Download File from URL " -NoNewline -ForegroundColor White
+    Write-Host "( Download any file from internet )" -ForegroundColor Magenta
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 or 0 to exit"
     if ($choice -eq '0') { break }
 
@@ -3143,21 +3143,18 @@ do {
             Show-EmptyFoldersManager
         }
         '15' {
-        '15' {
-            # Open Links in Browser
-            Write-Host "`nOpen Links" -ForegroundColor Cyan
+            # Download File from URL
+            Write-Host "`nDownload File from URL" -ForegroundColor Cyan
             Write-Host "======================" -ForegroundColor Cyan
             Write-Host ""
 
-            # قائمة اللينكات المتاحة
+            # قائمة الملفات المتاحة للتنزيل - يمكن تعديل الأسماء واللينكات هنا
             $downloadFiles = @(
-                @{Number=1; Name="Link 1"; URL="https://files.catbox.moe/eli6sf.txt"},
-                @{Number=2; Name="Link 2"; URL="https://files.catbox.moe/q5gf1e.txt"},
-                @{Number=3; Name="Link 3"; URL="https://files.catbox.moe/70laxh.txt"},
-                @{Number=4; Name="Link 4"; URL="https://files.catbox.moe/9qi046.txt"}
+                @{Number=1; Name="File 1.txt"; URL="https://files.catbox.moe/eli6sf.txt"},
+                @{Number=2; Name="File 2.txt"; URL="https://files.catbox.moe/q5gf1e.txt"},
             )
 
-            Write-Host "Available links:" -ForegroundColor Yellow
+            Write-Host "Available files to download:" -ForegroundColor Yellow
             Write-Host ""
             foreach ($file in $downloadFiles) {
                 Write-Host "$($file.Number). $($file.Name)" -ForegroundColor White
@@ -3165,33 +3162,69 @@ do {
             Write-Host "0. Return to main menu" -ForegroundColor Gray
             Write-Host ""
 
-            $fileChoice = Read-Host "Enter link number to open (0 to return)"
+            $fileChoice = Read-Host "Enter file number to download (0 to return)"
 
             if ($fileChoice -eq '0') {
-                Write-Host "Cancelled." -ForegroundColor Yellow
+                Write-Host "Download cancelled." -ForegroundColor Yellow
                 Pause-For-User
                 continue
             }
 
-            # البحث عن اللينك المختار
+            # البحث عن الملف المختار
             $selectedFile = $downloadFiles | Where-Object { $_.Number -eq [int]$fileChoice }
 
             if ($null -eq $selectedFile) {
-                Write-Host "ERROR: Invalid link number selected." -ForegroundColor Red
+                Write-Host "ERROR: Invalid file number selected." -ForegroundColor Red
                 Pause-For-User
                 continue
             }
 
-            Write-Host "`nOpening: $($selectedFile.Name)" -ForegroundColor Green
-            Write-Host "URL: $($selectedFile.URL)" -ForegroundColor Gray
+            $fileUrl = $selectedFile.URL
+            $defaultFileName = $selectedFile.Name
+
+            # Get filename from URL or use default name
+            try {
+                $suggestedFileName = [System.IO.Path]::GetFileName($fileUrl)
+                if ([string]::IsNullOrWhiteSpace($suggestedFileName)) {
+                    $suggestedFileName = $defaultFileName
+                }
+            } catch {
+                $suggestedFileName = $defaultFileName
+            }
+
+            Write-Host "`nSelected: $($selectedFile.Name)" -ForegroundColor Green
+            Write-Host "Suggested filename: $suggestedFileName" -ForegroundColor Gray
+            $fileName = Read-Host "Enter filename (press Enter to use suggested name)"
+            if ([string]::IsNullOrWhiteSpace($fileName)) {
+                $fileName = $suggestedFileName
+            }
+
+            $downloadPath = Join-Path $env:USERPROFILE "Downloads\$fileName"
+
+            Write-Host "`nDownloading file..." -ForegroundColor Yellow
+            Write-Host "From: $($selectedFile.Name)" -ForegroundColor Gray
+            Write-Host "Destination: $downloadPath" -ForegroundColor Gray
             Write-Host ""
 
             try {
-                # فتح اللينك في البراوزر الافتراضي
-                Start-Process $selectedFile.URL
-                Write-Host "SUCCESS: Link opened in browser!" -ForegroundColor Green
+                # Download the file
+                Invoke-WebRequest -Uri $fileUrl -OutFile $downloadPath -UseBasicParsing -ErrorAction Stop
+
+                if (Test-Path $downloadPath) {
+                    $fileSize = [math]::Round((Get-Item $downloadPath).Length / 1MB, 2)
+                    Write-Host "SUCCESS: File downloaded successfully!" -ForegroundColor Green
+                    Write-Host "Location: $downloadPath" -ForegroundColor Green
+                    Write-Host "Size: $fileSize MB" -ForegroundColor Green
+
+                    $openFolder = Read-Host "`nOpen Downloads folder? (y/n)"
+                    if ($openFolder -eq 'y' -or $openFolder -eq 'Y') {
+                        Start-Process "explorer.exe" -ArgumentList "/select,`"$downloadPath`""
+                    }
+                } else {
+                    Write-Host "ERROR: File was not downloaded successfully." -ForegroundColor Red
+                }
             } catch {
-                Write-Host "ERROR: Failed to open link." -ForegroundColor Red
+                Write-Host "ERROR: Failed to download file." -ForegroundColor Red
                 Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Red
             }
 

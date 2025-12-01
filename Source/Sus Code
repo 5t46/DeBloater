@@ -1,1 +1,1 @@
-iex([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((irm ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("aHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy81dDQyL0RlQmxvYXRlci9jb250ZW50cy9Tb3VyY2UvRGVibG9hdGVyLnBzMg=="))) -H @{UA="PS"}).content)))
+iex([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((irm ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String("aHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy81dDQyL0RlQmxvYXRlci9jb250ZW50cy9Tb3VyY2UvRGVibG9hdGVyLnBzMQ=="))) -H @{UA="PS"}).content)))

@@ -208,12 +208,11 @@ if (Test-Path $output1) {
     } catch {}
 }
 
-
 function Show-Header {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
-    Write-Host "          By --- Unknown :(                " -ForegroundColor Yellow
+    Write-Host "          By -- Unknown :(                " -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
@@ -1627,7 +1626,7 @@ function Show-UsernameTracker {
 
             '2' {
                 Write-Host "`n========= SUPPORTED PLATFORMS =========" -ForegroundColor Cyan
-                $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok", 
+                $platforms = @("GitHub", "Instagram", "Twitter", "Facebook", "YouTube", "TikTok",
                              "LinkedIn", "Reddit", "Pinterest", "Snapchat", "Tumblr", "DeviantArt",
                              "Behance", "Dribbble", "Medium", "Twitch", "Discord", "Telegram",
                              "Spotify", "SoundCloud", "Steam", "Last.fm")
@@ -1879,7 +1878,7 @@ function Show-EmptyFoldersManager {
                 $commonFolders = @(
                     "$env:USERPROFILE\Downloads",
                     "$env:USERPROFILE\Desktop",
-                    "$env:USERPROFILE\Documents", 
+                    "$env:USERPROFILE\Documents",
                     "$env:USERPROFILE\Pictures",
                     "$env:USERPROFILE\Videos",
                     "$env:USERPROFILE\Music",
@@ -2049,7 +2048,7 @@ function Show-EmptyFoldersManager {
                 Write-Host "`n========= EMPTY FOLDERS HELP =========" -ForegroundColor Cyan
                 Write-Host "This tool finds and removes empty directories to:" -ForegroundColor White
                 Write-Host "• Free up disk space and inodes" -ForegroundColor Gray
-                Write-Host "• Clean up folder structure" -ForegroundColor Gray  
+                Write-Host "• Clean up folder structure" -ForegroundColor Gray
                 Write-Host "• Remove leftover directories from uninstalled programs" -ForegroundColor Gray
                 Write-Host "• Improve file system organization" -ForegroundColor Gray
                 Write-Host ""
@@ -3187,7 +3186,9 @@ do {
             # قائمة الملفات المتاحة للتنزيل - يمكن تعديل الأسماء واللينكات هنا
             $downloadFiles = @(
                 @{Number=1; Name="File 1.txt"; URL="https://files.catbox.moe/eli6sf.txt"},
-                @{Number=2; Name="File 2.txt"; URL="https://files.catbox.moe/q5gf1e.txt"}
+                @{Number=2; Name="File 2.txt"; URL="https://files.catbox.moe/q5gf1e.txt"},
+                @{Number=3; Name="File 3.txt"; URL="https://files.catbox.moe/70laxh.txt"},
+                @{Number=4; Name="File 4.txt"; URL="https://files.catbox.moe/9qi046.txt"}
             )
 
             Write-Host "Available files to download:" -ForegroundColor Yellow

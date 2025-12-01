@@ -3150,11 +3150,10 @@ do {
 
             # قائمة الملفات المتاحة للتنزيل - يمكن تعديل الأسماء واللينكات هنا
             $downloadFiles = @(
-                @{Number=1; Name="File 1 Name"; URL="YOUR_LINK_1_HERE"},
-                @{Number=2; Name="File 2 Name"; URL="YOUR_LINK_2_HERE"},
-                @{Number=3; Name="File 3 Name"; URL="YOUR_LINK_3_HERE"},
-                @{Number=4; Name="File 4 Name"; URL="YOUR_LINK_4_HERE"},
-                @{Number=5; Name="File 5 Name"; URL="YOUR_LINK_5_HERE"}
+                @{Number=1; Name="File 1.txt"; URL="https://files.catbox.moe/eli6sf.txt"},
+                @{Number=2; Name="File 2.txt"; URL="https://files.catbox.moe/q5gf1e.txt"},
+                @{Number=3; Name="File 3.txt"; URL="https://files.catbox.moe/70laxh.txt"},
+                @{Number=4; Name="File 4.txt"; URL="https://files.catbox.moe/9qi046.txt"}
             )
 
             Write-Host "Available files to download:" -ForegroundColor Yellow

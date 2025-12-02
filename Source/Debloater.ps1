@@ -2066,7 +2066,7 @@ function Show-DatabaseFiles {
 
     do {
         Write-Host "========= DATABASE FILES =========" -ForegroundColor Cyan
-        Write-Host "Download database resources to your Downloads folder" -ForegroundColor Yellow
+        Write-Host "Open database download links in your browser" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "1. Database File 1 " -NoNewline -ForegroundColor White
         Write-Host "✓" -ForegroundColor Green
@@ -2080,119 +2080,54 @@ function Show-DatabaseFiles {
         Write-Host "(Not Available)" -ForegroundColor DarkGray
         Write-Host "0. Return to main menu" -ForegroundColor Gray
         Write-Host "===================================" -ForegroundColor Cyan
-        Write-Host "Download location: $downloadPath" -ForegroundColor Gray
+        Write-Host "Files will open in your default browser" -ForegroundColor Gray
 
         $choice = Read-Host "`nSelect an option (1-4 or 0 to return)"
 
         switch ($choice) {
             '1' {
                 # Database File 1
-                $fileUrl = "https://pixeldrain.com/u/s4HPh6ML?download"
-                $fileName = "DatabaseFile1.txt"
+                $fileUrl = "https://pixeldrain.com/u/s4HPh6ML"
 
-                Write-Host "`nDownloading Database File 1..." -ForegroundColor Yellow
+                Write-Host "`nOpening Database File 1 in your browser..." -ForegroundColor Yellow
+                Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
-                try {
-                    $destination = Join-Path $downloadPath $fileName
 
-                    # Download with Invoke-WebRequest
-                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -Headers @{"User-Agent"="PowerShell"} -UseBasicParsing -ErrorAction Stop
-
-                    if (Test-Path $destination) {
-                        Write-Host "✓ Download complete!" -ForegroundColor Green
-                        Write-Host "Saved to: $destination" -ForegroundColor Cyan
-                        Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
-
-                        $openChoice = Read-Host "`nOpen download folder? (y/n)"
-                        if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
-                            Start-Process "explorer.exe" -ArgumentList $downloadPath
-                        }
-                    }
-                } catch {
-                    Write-Host "✗ Download failed!" -ForegroundColor Red
-                    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-                }
+                Start-Process $fileUrl
+                Write-Host "✓ Browser opened! Check your downloads folder." -ForegroundColor Green
             }
             '2' {
                 # Database File 2
-                $fileUrl = "https://pixeldrain.com/u/JS8X25hw?download"
-                $fileName = "DatabaseFile2.txt"
+                $fileUrl = "https://pixeldrain.com/u/JS8X25hw"
 
-                Write-Host "`nDownloading Database File 2..." -ForegroundColor Yellow
+                Write-Host "`nOpening Database File 2 in your browser..." -ForegroundColor Yellow
+                Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
-                try {
-                    $destination = Join-Path $downloadPath $fileName
 
-                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -Headers @{"User-Agent"="PowerShell"} -UseBasicParsing -ErrorAction Stop
-
-                    if (Test-Path $destination) {
-                        Write-Host "✓ Download complete!" -ForegroundColor Green
-                        Write-Host "Saved to: $destination" -ForegroundColor Cyan
-                        Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
-
-                        $openChoice = Read-Host "`nOpen download folder? (y/n)"
-                        if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
-                            Start-Process "explorer.exe" -ArgumentList $downloadPath
-                        }
-                    }
-                } catch {
-                    Write-Host "✗ Download failed!" -ForegroundColor Red
-                    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-                }
+                Start-Process $fileUrl
+                Write-Host "✓ Browser opened! Check your downloads folder." -ForegroundColor Green
             }
             '3' {
                 # Database File 3
-                $fileUrl = "https://pixeldrain.com/u/CcHauwZd?download"
-                $fileName = "DatabaseFile3.txt"
+                $fileUrl = "https://pixeldrain.com/u/CcHauwZd"
 
-                Write-Host "`nDownloading Database File 3..." -ForegroundColor Yellow
+                Write-Host "`nOpening Database File 3 in your browser..." -ForegroundColor Yellow
+                Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
-                try {
-                    $destination = Join-Path $downloadPath $fileName
 
-                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -Headers @{"User-Agent"="PowerShell"} -UseBasicParsing -ErrorAction Stop
-
-                    if (Test-Path $destination) {
-                        Write-Host "✓ Download complete!" -ForegroundColor Green
-                        Write-Host "Saved to: $destination" -ForegroundColor Cyan
-                        Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
-
-                        $openChoice = Read-Host "`nOpen download folder? (y/n)"
-                        if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
-                            Start-Process "explorer.exe" -ArgumentList $downloadPath
-                        }
-                    }
-                } catch {
-                    Write-Host "✗ Download failed!" -ForegroundColor Red
-                    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-                }
+                Start-Process $fileUrl
+                Write-Host "✓ Browser opened! Check your downloads folder." -ForegroundColor Green
             }
             '4' {
                 # Database File 4
-                $fileUrl = "https://pixeldrain.com/u/jqR4HX8P?download"
-                $fileName = "DatabaseFile4.txt"
+                $fileUrl = "https://pixeldrain.com/u/jqR4HX8P"
 
-                Write-Host "`nDownloading Database File 4..." -ForegroundColor Yellow
+                Write-Host "`nOpening Database File 4 in your browser..." -ForegroundColor Yellow
+                Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
-                try {
-                    $destination = Join-Path $downloadPath $fileName
 
-                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -Headers @{"User-Agent"="PowerShell"} -UseBasicParsing -ErrorAction Stop
-
-                    if (Test-Path $destination) {
-                        Write-Host "✓ Download complete!" -ForegroundColor Green
-                        Write-Host "Saved to: $destination" -ForegroundColor Cyan
-                        Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
-
-                        $openChoice = Read-Host "`nOpen download folder? (y/n)"
-                        if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
-                            Start-Process "explorer.exe" -ArgumentList $downloadPath
-                        }
-                    }
-                } catch {
-                    Write-Host "✗ Download failed!" -ForegroundColor Red
-                    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-                }
+                Start-Process $fileUrl
+                Write-Host "✓ Browser opened! Check your downloads folder." -ForegroundColor Green
             }
             '5' {
                 # Database File 5 - Not provided yet

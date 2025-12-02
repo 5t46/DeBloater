@@ -66,7 +66,7 @@ function Show-Header {
         Shows a formatted header with application name, version, author, and usage description
     #>
 
-    Write-Host ""
+        Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
     Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
@@ -1711,6 +1711,7 @@ function Find-EmptyFolders {
 
     # Default exclusions for system folders
     $defaultExclusions = @(
+        "C:\",
         "C:\Windows",
         "C:\Program Files",
         "C:\Program Files (x86)",

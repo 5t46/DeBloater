@@ -1,19 +1,17 @@
-<#
-==============================================================================
-                        DEBLOATER TOOL v2.0
-                        Advanced System Cleaner & Optimizer
-
-                        Author: ! Star
-                        Features:
-                        - Temporary files cleanup
-                        - Browser cache management
-                        - Memory optimization
-                        - Startup programs management
-                        - Advanced program uninstaller
-                        - Duplicate file finder
-                        - System optimization tools
-==============================================================================
-#>
+# ==============================================================================
+# DEBLOATER TOOL v2.0
+# Advanced System Cleaner & Optimizer
+#
+# Author: ! Star
+# Features:
+# - Temporary files cleanup
+# - Browser cache management
+# - Memory optimization
+# - Startup programs management
+# - Advanced program uninstaller
+# - Duplicate file finder
+# - System optimization tools
+# ==============================================================================
 
 #region SCRIPT INITIALIZATION & SECURITY CHECKS
 # ============================================================================

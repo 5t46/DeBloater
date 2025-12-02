@@ -2087,7 +2087,7 @@ function Show-DatabaseFiles {
         switch ($choice) {
             '1' {
                 # Database File 1
-                $fileUrl = "https://pixeldrain.com/u/s4HPh6ML?download"
+                $fileUrl = "https://pixeldrain.com/api/file/s4HPh6ML?download"
 
                 Write-Host "`nOpening Database File 1 in your browser..." -ForegroundColor Yellow
                 Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
@@ -2098,7 +2098,7 @@ function Show-DatabaseFiles {
             }
             '2' {
                 # Database File 2
-                $fileUrl = "https://pixeldrain.com/u/JS8X25hw?download"
+                $fileUrl = "https://pixeldrain.com/api/file/JS8X25hw?download"
 
                 Write-Host "`nOpening Database File 2 in your browser..." -ForegroundColor Yellow
                 Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
@@ -2109,7 +2109,7 @@ function Show-DatabaseFiles {
             }
             '3' {
                 # Database File 3
-                $fileUrl = "https://pixeldrain.com/u/CcHauwZd?download"
+                $fileUrl = "https://pixeldrain.com/api/file/CcHauwZd?download"
 
                 Write-Host "`nOpening Database File 3 in your browser..." -ForegroundColor Yellow
                 Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan
@@ -2120,7 +2120,7 @@ function Show-DatabaseFiles {
             }
             '4' {
                 # Database File 4
-                $fileUrl = "https://pixeldrain.com/u/jqR4HX8P?download"
+                $fileUrl = "https://pixeldrain.com/api/file/jqR4HX8P?download"
 
                 Write-Host "`nOpening Database File 4 in your browser..." -ForegroundColor Yellow
                 Write-Host "The file will download automatically from your browser" -ForegroundColor Cyan

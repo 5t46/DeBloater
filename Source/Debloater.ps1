@@ -1,25 +1,3 @@
-# ==============================================================================
-# DEBLOATER TOOL v2.0
-# Advanced System Cleaner & Optimizer
-#
-# Author: ! Star
-# Features:
-# - Temporary files cleanup
-# - Browser cache management
-# - Memory optimization
-# - Startup programs management
-# - Advanced program uninstaller
-# - Duplicate file finder
-# - System optimization tools
-# ==============================================================================
-
-#region SCRIPT INITIALIZATION & SECURITY CHECKS
-# ============================================================================
-# SCRIPT INITIALIZATION & SECURITY CHECKS
-# ============================================================================
-
-# Check if script is running with Administrator privileges
-#endregion
 
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {

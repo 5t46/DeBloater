@@ -178,7 +178,7 @@ function Show-Header {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
-    Write-Host "          By --- Unknown :(                " -ForegroundColor Yellow
+    Write-Host "          By --- Трахаюсь :(                " -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta

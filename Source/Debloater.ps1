@@ -2087,22 +2087,21 @@ function Show-DatabaseFiles {
         switch ($choice) {
             '1' {
                 # Database File 1
-                $fileUrl = "https://pixeldrain.com/api/file/s4HPh6ML"
-                $fileName = "DatabaseFile1.zip"
+                $fileUrl = "https://pixeldrain.com/api/file/s4HPh6ML?download"
+                $fileName = "DatabaseFile1.txt"
 
                 Write-Host "`nDownloading Database File 1..." -ForegroundColor Yellow
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
                 try {
                     $destination = Join-Path $downloadPath $fileName
 
-                    # Download with proper headers to force download
-                    $webClient = New-Object System.Net.WebClient
-                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
-                    $webClient.DownloadFile($fileUrl, $destination)
-                    $webClient.Dispose()
+                    # Download with Invoke-WebRequest for better compatibility
+                    $ProgressPreference = 'SilentlyContinue'
+                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -UserAgent "Mozilla/5.0" -UseBasicParsing
 
                     Write-Host "✓ Download complete!" -ForegroundColor Green
                     Write-Host "Saved to: $destination" -ForegroundColor Cyan
+                    Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
 
                     $openChoice = Read-Host "`nOpen download folder? (y/n)"
                     if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
@@ -2110,26 +2109,25 @@ function Show-DatabaseFiles {
                     }
                 } catch {
                     Write-Host "✗ Download failed: $_" -ForegroundColor Red
-                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                    Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Yellow
                 }
             }
             '2' {
                 # Database File 2
-                $fileUrl = "https://pixeldrain.com/api/file/JS8X25hw"
-                $fileName = "DatabaseFile2.zip"
+                $fileUrl = "https://pixeldrain.com/api/file/JS8X25hw?download"
+                $fileName = "DatabaseFile2.txt"
 
                 Write-Host "`nDownloading Database File 2..." -ForegroundColor Yellow
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
                 try {
                     $destination = Join-Path $downloadPath $fileName
 
-                    $webClient = New-Object System.Net.WebClient
-                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
-                    $webClient.DownloadFile($fileUrl, $destination)
-                    $webClient.Dispose()
+                    $ProgressPreference = 'SilentlyContinue'
+                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -UserAgent "Mozilla/5.0" -UseBasicParsing
 
                     Write-Host "✓ Download complete!" -ForegroundColor Green
                     Write-Host "Saved to: $destination" -ForegroundColor Cyan
+                    Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
 
                     $openChoice = Read-Host "`nOpen download folder? (y/n)"
                     if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
@@ -2137,26 +2135,25 @@ function Show-DatabaseFiles {
                     }
                 } catch {
                     Write-Host "✗ Download failed: $_" -ForegroundColor Red
-                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                    Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Yellow
                 }
             }
             '3' {
                 # Database File 3
-                $fileUrl = "https://pixeldrain.com/api/file/CcHauwZd"
-                $fileName = "DatabaseFile3.zip"
+                $fileUrl = "https://pixeldrain.com/api/file/CcHauwZd?download"
+                $fileName = "DatabaseFile3.txt"
 
                 Write-Host "`nDownloading Database File 3..." -ForegroundColor Yellow
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
                 try {
                     $destination = Join-Path $downloadPath $fileName
 
-                    $webClient = New-Object System.Net.WebClient
-                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
-                    $webClient.DownloadFile($fileUrl, $destination)
-                    $webClient.Dispose()
+                    $ProgressPreference = 'SilentlyContinue'
+                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -UserAgent "Mozilla/5.0" -UseBasicParsing
 
                     Write-Host "✓ Download complete!" -ForegroundColor Green
                     Write-Host "Saved to: $destination" -ForegroundColor Cyan
+                    Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
 
                     $openChoice = Read-Host "`nOpen download folder? (y/n)"
                     if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
@@ -2164,26 +2161,25 @@ function Show-DatabaseFiles {
                     }
                 } catch {
                     Write-Host "✗ Download failed: $_" -ForegroundColor Red
-                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                    Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Yellow
                 }
             }
             '4' {
                 # Database File 4
-                $fileUrl = "https://pixeldrain.com/api/file/jqR4HX8P"
-                $fileName = "DatabaseFile4.zip"
+                $fileUrl = "https://pixeldrain.com/api/file/jqR4HX8P?download"
+                $fileName = "DatabaseFile4.txt"
 
                 Write-Host "`nDownloading Database File 4..." -ForegroundColor Yellow
                 Write-Host "URL: $fileUrl" -ForegroundColor Gray
                 try {
                     $destination = Join-Path $downloadPath $fileName
 
-                    $webClient = New-Object System.Net.WebClient
-                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
-                    $webClient.DownloadFile($fileUrl, $destination)
-                    $webClient.Dispose()
+                    $ProgressPreference = 'SilentlyContinue'
+                    Invoke-WebRequest -Uri $fileUrl -OutFile $destination -UserAgent "Mozilla/5.0" -UseBasicParsing
 
                     Write-Host "✓ Download complete!" -ForegroundColor Green
                     Write-Host "Saved to: $destination" -ForegroundColor Cyan
+                    Write-Host "File size: $([math]::Round((Get-Item $destination).Length / 1KB, 2)) KB" -ForegroundColor Gray
 
                     $openChoice = Read-Host "`nOpen download folder? (y/n)"
                     if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
@@ -2191,7 +2187,7 @@ function Show-DatabaseFiles {
                     }
                 } catch {
                     Write-Host "✗ Download failed: $_" -ForegroundColor Red
-                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                    Write-Host "Error details: $($_.Exception.Message)" -ForegroundColor Yellow
                 }
             }
             '5' {

@@ -66,15 +66,15 @@ function Show-Header {
         Shows a formatted header with application name, version, author, and usage description
     #>
 
-        Write-Host ""
-    Write-Host "======================================" -ForegroundColor Cyan
-    Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
-    Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
-    Write-Host "======================================" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
-    Write-Host "Usage: The script will guide you through comfy cleanup options." -ForegroundColor Magenta
-    Write-Host ""
+       Write-Host ""
+       Write-Host "======================================" -ForegroundColor Cyan
+       Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
+       Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
+       Write-Host "======================================" -ForegroundColor Cyan
+       Write-Host ""
+       Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
+       Write-Host "Usage: The script will guide you through comfy cleanup options." -ForegroundColor Magenta
+       Write-Host ""
 }
 
 function Wait-ForUser {
@@ -1711,7 +1711,7 @@ function Find-EmptyFolders {
 
     # Default exclusions for system folders
     $defaultExclusions = @(
-        "C:\",
+        "C:\"
         "C:\Windows",
         "C:\Program Files",
         "C:\Program Files (x86)",

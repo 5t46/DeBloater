@@ -178,7 +178,7 @@ function Show-Header {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
-    Write-Host "          By --- Трахаюсь - :(                " -ForegroundColor Yellow
+    Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
@@ -2044,6 +2044,179 @@ function Show-EmptyFoldersManager {
     } while ($choice -ne '0')
 }
 #endregion
+
+#region DATABASE FILES MANAGER
+# ============================================================================
+# DATABASE FILES - QUICK ACCESS TO DATABASE RESOURCES
+# ============================================================================
+
+function Show-DatabaseFiles {
+    <#
+    .SYNOPSIS
+        Displays database files menu with download options
+    .DESCRIPTION
+        Downloads database files from GitHub to user's Downloads folder
+    #>
+
+    Clear-Host
+    Show-Header
+
+    # Define download destination
+    $downloadPath = Join-Path $env:USERPROFILE "Downloads"
+
+    do {
+        Write-Host "========= DATABASE FILES =========" -ForegroundColor Cyan
+        Write-Host "Download database resources to your Downloads folder" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "1. Database File 1 " -NoNewline -ForegroundColor White
+        Write-Host "✓" -ForegroundColor Green
+        Write-Host "2. Database File 2 " -NoNewline -ForegroundColor White
+        Write-Host "✓" -ForegroundColor Green
+        Write-Host "3. Database File 3 " -NoNewline -ForegroundColor White
+        Write-Host "✓" -ForegroundColor Green
+        Write-Host "4. Database File 4 " -NoNewline -ForegroundColor White
+        Write-Host "✓" -ForegroundColor Green
+        Write-Host "5. Database File 5 " -NoNewline -ForegroundColor White
+        Write-Host "(Not Available)" -ForegroundColor DarkGray
+        Write-Host "0. Return to main menu" -ForegroundColor Gray
+        Write-Host "===================================" -ForegroundColor Cyan
+        Write-Host "Download location: $downloadPath" -ForegroundColor Gray
+
+        $choice = Read-Host "`nSelect an option (1-4 or 0 to return)"
+
+        switch ($choice) {
+            '1' {
+                # Database File 1
+                $fileUrl = "https://pixeldrain.com/api/file/s4HPh6ML"
+                $fileName = "DatabaseFile1.zip"
+
+                Write-Host "`nDownloading Database File 1..." -ForegroundColor Yellow
+                Write-Host "URL: $fileUrl" -ForegroundColor Gray
+                try {
+                    $destination = Join-Path $downloadPath $fileName
+
+                    # Download with proper headers to force download
+                    $webClient = New-Object System.Net.WebClient
+                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
+                    $webClient.DownloadFile($fileUrl, $destination)
+                    $webClient.Dispose()
+
+                    Write-Host "✓ Download complete!" -ForegroundColor Green
+                    Write-Host "Saved to: $destination" -ForegroundColor Cyan
+
+                    $openChoice = Read-Host "`nOpen download folder? (y/n)"
+                    if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
+                        Start-Process "explorer.exe" -ArgumentList $downloadPath
+                    }
+                } catch {
+                    Write-Host "✗ Download failed: $_" -ForegroundColor Red
+                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                }
+            }
+            '2' {
+                # Database File 2
+                $fileUrl = "https://pixeldrain.com/api/file/JS8X25hw"
+                $fileName = "DatabaseFile2.zip"
+
+                Write-Host "`nDownloading Database File 2..." -ForegroundColor Yellow
+                Write-Host "URL: $fileUrl" -ForegroundColor Gray
+                try {
+                    $destination = Join-Path $downloadPath $fileName
+
+                    $webClient = New-Object System.Net.WebClient
+                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
+                    $webClient.DownloadFile($fileUrl, $destination)
+                    $webClient.Dispose()
+
+                    Write-Host "✓ Download complete!" -ForegroundColor Green
+                    Write-Host "Saved to: $destination" -ForegroundColor Cyan
+
+                    $openChoice = Read-Host "`nOpen download folder? (y/n)"
+                    if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
+                        Start-Process "explorer.exe" -ArgumentList $downloadPath
+                    }
+                } catch {
+                    Write-Host "✗ Download failed: $_" -ForegroundColor Red
+                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                }
+            }
+            '3' {
+                # Database File 3
+                $fileUrl = "https://pixeldrain.com/api/file/CcHauwZd"
+                $fileName = "DatabaseFile3.zip"
+
+                Write-Host "`nDownloading Database File 3..." -ForegroundColor Yellow
+                Write-Host "URL: $fileUrl" -ForegroundColor Gray
+                try {
+                    $destination = Join-Path $downloadPath $fileName
+
+                    $webClient = New-Object System.Net.WebClient
+                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
+                    $webClient.DownloadFile($fileUrl, $destination)
+                    $webClient.Dispose()
+
+                    Write-Host "✓ Download complete!" -ForegroundColor Green
+                    Write-Host "Saved to: $destination" -ForegroundColor Cyan
+
+                    $openChoice = Read-Host "`nOpen download folder? (y/n)"
+                    if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
+                        Start-Process "explorer.exe" -ArgumentList $downloadPath
+                    }
+                } catch {
+                    Write-Host "✗ Download failed: $_" -ForegroundColor Red
+                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                }
+            }
+            '4' {
+                # Database File 4
+                $fileUrl = "https://pixeldrain.com/api/file/jqR4HX8P"
+                $fileName = "DatabaseFile4.zip"
+
+                Write-Host "`nDownloading Database File 4..." -ForegroundColor Yellow
+                Write-Host "URL: $fileUrl" -ForegroundColor Gray
+                try {
+                    $destination = Join-Path $downloadPath $fileName
+
+                    $webClient = New-Object System.Net.WebClient
+                    $webClient.Headers.Add("User-Agent", "Mozilla/5.0")
+                    $webClient.DownloadFile($fileUrl, $destination)
+                    $webClient.Dispose()
+
+                    Write-Host "✓ Download complete!" -ForegroundColor Green
+                    Write-Host "Saved to: $destination" -ForegroundColor Cyan
+
+                    $openChoice = Read-Host "`nOpen download folder? (y/n)"
+                    if ($openChoice -eq 'y' -or $openChoice -eq 'Y') {
+                        Start-Process "explorer.exe" -ArgumentList $downloadPath
+                    }
+                } catch {
+                    Write-Host "✗ Download failed: $_" -ForegroundColor Red
+                    Write-Host "Make sure the link is in format: https://pixeldrain.com/api/file/FILE_ID" -ForegroundColor Yellow
+                }
+            }
+            '5' {
+                # Database File 5 - Not provided yet
+                Write-Host "`nThis file is not available yet." -ForegroundColor Yellow
+                Write-Host "Only files 1-4 are currently available for download." -ForegroundColor Gray
+            }
+            '0' {
+                Write-Host "`nReturning to main menu..." -ForegroundColor Yellow
+                return
+            }
+            default {
+                Write-Host "`nInvalid choice. Please select 1-5 or 0 to return." -ForegroundColor Red
+            }
+        }
+
+        if ($choice -ne '0') {
+            Pause-For-User
+            Clear-Host
+            Show-Header
+        }
+
+    } while ($choice -ne '0')
+}
+#endregion
 #endregion
 
 #region SYSTEM STARTUP & EXTERNAL TOOLS
@@ -2081,7 +2254,9 @@ do {
     Write-Host "( Find Usernames Across Platforms )" -ForegroundColor Magenta
     Write-Host "14. Empty Folders Removal " -NoNewline -ForegroundColor White
     Write-Host "( Find & Remove Empty Directories )" -ForegroundColor Magenta
-    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 or 0 to exit"
+    Write-Host "15. Database Files " -NoNewline -ForegroundColor White
+    Write-Host "( Access Database Resources )" -ForegroundColor Magenta
+    $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 or 0 to exit"
     if ($choice -eq '0') { break }
 
     switch ($choice) {
@@ -3140,6 +3315,10 @@ do {
         '14' {
             # Empty Folders Removal
             Show-EmptyFoldersManager
+        }
+        '15' {
+            # Database Files
+            Show-DatabaseFiles
         }
         #endregion
     }

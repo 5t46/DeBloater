@@ -1,4 +1,4 @@
-<# 1
+<#
 ==============================================================================
                         DEBLOATER TOOL v2.0
                         Advanced System Cleaner & Optimizer

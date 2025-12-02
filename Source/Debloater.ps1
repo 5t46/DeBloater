@@ -68,12 +68,12 @@ function Show-Header {
 
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Cyan
-    Write-Host "         Debloater Tool v2.0          " -ForegroundColor Green
-    Write-Host "          By ! Star                   " -ForegroundColor Yellow
+    Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
+    Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
     Write-Host "======================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Description: Advanced system cleaner and optimizer tool." -ForegroundColor Magenta
-    Write-Host "Usage: Select options from the menu for system optimization." -ForegroundColor Magenta
+    Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
+    Write-Host "Usage: The script will guide you through comfy cleanup options." -ForegroundColor Magenta
     Write-Host ""
 }
 

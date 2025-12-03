@@ -62,6 +62,29 @@ $script:LastDuplicateResults = @()
 # CORE UTILITY FUNCTIONS
 # ============================================================================
 
+function Write-ColorText {
+    <#
+    .SYNOPSIS
+        Writes colored text using RGB values via ANSI escape codes
+    .PARAMETER Text
+        The text to display
+    .PARAMETER R
+        Red value (0-255)
+    .PARAMETER G
+        Green value (0-255)
+    .PARAMETER B
+        Blue value (0-255)
+    #>
+    param(
+        [string]$Text,
+        [int]$R = 0,
+        [int]$G = 253,
+        [int]$B = 254
+    )
+    $esc = [char]27
+    Write-Host "$esc[38;2;$R;$G;${B}m$Text$esc[0m"
+}
+
 function Show-Header {
     <#
     .SYNOPSIS
@@ -1812,12 +1835,12 @@ function Show-EmptyFoldersManager {
         Write-Host "Find and remove empty directories to free up space" -ForegroundColor Yellow
         Write-Host ""
         Write-Host "1. Quick scan " -NoNewline -ForegroundColor White
-        Write-Host "( Common user folders )" -ForegroundColor "#00fdfe"
+        Write-ColorText "( Common user folders )"
         Write-Host "2. Scan specific folder" -ForegroundColor White
         Write-Host "3. Advanced scan " -NoNewline -ForegroundColor White
-        Write-Host "( Custom path with options )" -ForegroundColor "#00fdfe"
+        Write-ColorText "( Custom path with options )"
         Write-Host "4. Scan entire system " -NoNewline -ForegroundColor White
-        Write-Host "( May take long time )" -ForegroundColor "#00fdfe"
+        Write-ColorText "( May take long time )"
         Write-Host "5. Help & Information" -ForegroundColor White
         Write-Host "0. Return to Main Menu" -ForegroundColor Gray
 
@@ -2153,32 +2176,32 @@ do {
     Write-Host ""
     Write-Host "What would you like to do?" -ForegroundColor Cyan
     Write-Host "1. Clear Temporary Files " -NoNewline -ForegroundColor White
-    Write-Host "( Choose Folders )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Choose Folders )"
     Write-Host "2. Do Nothing " -NoNewline -ForegroundColor White
-    Write-Host "( Exit )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Exit )"
     Write-Host "3. Full Cleanup " -NoNewline -ForegroundColor White
-    Write-Host "( Temp, Local Temp, Windows Temp, Prefetch )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Temp, Local Temp, Windows Temp, Prefetch )"
     Write-Host "4. Clear Browser Cache " -NoNewline -ForegroundColor White
-    Write-Host "( Firefox, Chrome, Edge )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Firefox, Chrome, Edge )"
     Write-Host "5. Clear Recycle Bin" -ForegroundColor White
     Write-Host "6. Memory Optimizer " -NoNewline -ForegroundColor White
-    Write-Host "( Clear Cached Memory )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Clear Cached Memory )"
     Write-Host "7. Get Public IP Address with Details" -ForegroundColor White
     Write-Host "8. Startup Manager " -NoNewline -ForegroundColor White
-    Write-Host "( Enable/Disable Startup Programs )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Enable/Disable Startup Programs )"
     Write-Host "9. Advanced Program Uninstaller" -ForegroundColor White
     Write-Host "10. Complete App Remover " -NoNewline -ForegroundColor White
-    Write-Host "( Like Revo Uninstaller )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Like Revo Uninstaller )"
     Write-Host "11. Duplicate File Finder " -NoNewline -ForegroundColor White
-    Write-Host "( Find & Remove Duplicates )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Find & Remove Duplicates )"
     Write-Host "12. System Information " -NoNewline -ForegroundColor White
-    Write-Host "( Hardware & Software Details )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Hardware & Software Details )"
     Write-Host "13. Username Tracker " -NoNewline -ForegroundColor White
-    Write-Host "( Find Usernames Across Platforms )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Find Usernames Across Platforms )"
     Write-Host "14. Empty Folders Removal " -NoNewline -ForegroundColor White
-    Write-Host "( Find & Remove Empty Directories )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Find & Remove Empty Directories )"
     Write-Host "15. Database Files " -NoNewline -ForegroundColor White
-    Write-Host "( Access Database Resources )" -ForegroundColor "#00fdfe"
+    Write-ColorText "( Access Database Resources )"
     $choice = Read-Host "`nEnter 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 or 0 to exit"
     if ($choice -eq '0') { break }
 
@@ -2210,7 +2233,7 @@ do {
                 Pause-For-User
                 break
             }
-            Write-Host "Starting cleanup in 3 seconds..." -ForegroundColor "#00fdfe"
+            Write-ColorText "Starting cleanup in 3 seconds..."
             Start-Sleep -Seconds 3
             $startTime = Get-Date
             $spaceBefore = (Get-PSDrive C).Free
@@ -2986,7 +3009,7 @@ do {
                 Write-Host "1. View all applications" -ForegroundColor White
                 Write-Host "2. Search applications" -ForegroundColor White
                 Write-Host "3. Remove application " -NoNewline -ForegroundColor White
-                Write-Host "( Complete Deep Clean )" -ForegroundColor "#00fdfe"
+                Write-ColorText "( Complete Deep Clean )"
                 Write-Host "4. Batch remove multiple apps" -ForegroundColor White
                 Write-Host "5. Scan for leftover traces" -ForegroundColor White
                 Write-Host "0. Return to main menu" -ForegroundColor Gray
@@ -3148,9 +3171,9 @@ do {
                 Write-Host "Duplicate File Finder Options:" -ForegroundColor Cyan
                 Write-Host "1. Scan specific folder" -ForegroundColor White
                 Write-Host "2. Scan common folders " -NoNewline -ForegroundColor White
-                Write-Host "( Downloads, Desktop, Documents )" -ForegroundColor "#00fdfe"
+                Write-ColorText "( Downloads, Desktop, Documents )"
                 Write-Host "3. Scan entire system " -NoNewline -ForegroundColor White
-                Write-Host "( May take long time )" -ForegroundColor "#00fdfe"
+                Write-ColorText "( May take long time )"
                 Write-Host "4. View duplicate groups" -ForegroundColor White
                 Write-Host "5. Clear duplicate results" -ForegroundColor White
                 Write-Host "0. Return to main menu" -ForegroundColor Gray

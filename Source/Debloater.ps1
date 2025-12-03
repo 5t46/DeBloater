@@ -77,7 +77,6 @@ function Show-Header {
        Write-Host "======================================" -ForegroundColor Cyan
        Write-Host ""
        Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
-       Write-Host "Usage: The script will guide you through comfy cleanup options." -ForegroundColor Cyan
        Write-Host ""
 }
 

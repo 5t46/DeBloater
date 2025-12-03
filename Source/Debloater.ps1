@@ -4,7 +4,7 @@
                         Advanced System Cleaner & Optimizer
 
                         Author: Unknown
-                        Features: 1111111
+                        Features:
                         - Temporary files cleanup
                         - Browser cache management
                         - Memory optimization

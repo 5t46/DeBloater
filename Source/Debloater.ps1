@@ -95,11 +95,11 @@ function Show-Header {
 
        Write-Host ""
        Write-Host "======================================" -ForegroundColor Cyan
-       Write-Host "         Cleaner Tool v1.0          " -ForegroundColor Green
+       Write-Host "         Cleaner - Легко трахаться    " -ForegroundColor Green
        Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
        Write-Host "======================================" -ForegroundColor Cyan
        Write-Host ""
-       Write-Host ""
+       Write-Host "Lestin to каникулы and Kamaz BTW"
 }
 
 function Wait-ForUser {

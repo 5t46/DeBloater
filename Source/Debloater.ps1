@@ -3,7 +3,7 @@
                         DEBLOATER TOOL v2.0
                         Advanced System Cleaner & Optimizer
 
-                        Author: ! Star
+                        Author: Unknown
                         Features:
                         - Temporary files cleanup
                         - Browser cache management
@@ -26,11 +26,10 @@
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
-    Wait-ForUser "Press Enter to exit..."
+    Write-Host ""
+    Read-Host "Press Enter to exit"
     exit
-}
-
-# Configure PowerShell preferences for better performance
+}# Configure PowerShell preferences for better performance
 $ProgressPreference = 'SilentlyContinue'
 Clear-Host
 

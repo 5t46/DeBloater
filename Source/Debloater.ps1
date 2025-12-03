@@ -29,7 +29,9 @@ if (-not $isAdmin) {
     Write-Host ""
     Read-Host "Press Enter to exit"
     exit
-}# Configure PowerShell preferences for better performance
+}
+
+# Configure PowerShell preferences for better performance
 $ProgressPreference = 'SilentlyContinue'
 Clear-Host
 

@@ -3276,6 +3276,4 @@ do {
 # APPLICATION EXIT & CLEANUP
 # ============================================================================
 
-Write-Host "`nThanks for using Debloater Tool! Stay comfy! :)" -ForegroundColor Cyan
-Pause-For-User "Press Enter to exit..."
 #endregion

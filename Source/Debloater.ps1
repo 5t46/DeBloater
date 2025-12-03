@@ -76,7 +76,6 @@ function Show-Header {
        Write-Host "          By --- Трахаюсь -:(                " -ForegroundColor Yellow
        Write-Host "======================================" -ForegroundColor Cyan
        Write-Host ""
-       Write-Host "Description: Cleans temp files, optimizes system, clears browser cache." -ForegroundColor Magenta
        Write-Host ""
 }
 

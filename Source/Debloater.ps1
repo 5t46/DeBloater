@@ -2283,6 +2283,8 @@ do {
         #region OPTION 3 - FULL CLEANUP
         '3' {
             Write-Host "You can enter 0 at any time to return to the main menu." -ForegroundColor Yellow
+            $startTime = Get-Date
+            $spaceBefore = (Get-PSDrive C).Free
             $folders = @(
                 $env:TEMP,
                 "$env:USERPROFILE\AppData\Local\Temp",

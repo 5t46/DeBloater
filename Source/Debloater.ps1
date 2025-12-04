@@ -2258,7 +2258,7 @@ do {
             }
             $spaceAfter = (Get-PSDrive C).Free
             $endTime = Get-Date
-            $duration = ($endTime - $startTime).TotalSeconds
+            $duration = (New-TimeSpan -Start $startTime -End $endTime).TotalSeconds
             Write-Host "Temporary files cleared." -ForegroundColor Green
             Write-Host "Free space after cleanup: $([math]::Round($spaceAfter/1MB,2)) MB" -ForegroundColor Cyan
             $spaceFreed = ($spaceAfter - $spaceBefore) / 1MB
@@ -2317,7 +2317,7 @@ do {
             }
             $spaceAfter = (Get-PSDrive C).Free
             $endTime = Get-Date
-            $duration = ($endTime - $startTime).TotalSeconds
+            $duration = (New-TimeSpan -Start $startTime -End $endTime).TotalSeconds
             Write-Host "Full cleanup done." -ForegroundColor Green
             Write-Host "Free space after cleanup: $([math]::Round($spaceAfter/1MB,2)) MB" -ForegroundColor Cyan
             $spaceFreed = ($spaceAfter - $spaceBefore) / 1MB

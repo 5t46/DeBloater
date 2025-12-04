@@ -2173,6 +2173,8 @@ function Show-DatabaseFiles {
 Show-Header
 
 do {
+    Clear-Host
+    Show-Header
     Write-Host ""
     Write-Host "What would you like to do?" -ForegroundColor Cyan
     Write-Host "1. Clear Temporary Files " -NoNewline -ForegroundColor White
